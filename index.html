@@ -2,62 +2,71 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>MATRIOSKA BETA 1.0 | VIPER TERMINAL</title>
+    <title>MATRIOSKA BETA 1.1 | VIPER TERMINAL</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --neon: #00ff41; --bg: #0d0d0d; --panel: #1a1a1a; --border: #333; }
-        body { background: var(--bg); color: var(--neon); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        :root { --neon: #00ff41; --bg: #0d0d0d; --panel: #1a1a1a; --border: #333; --cyan: #00f2ff; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Sidebar Estetica Beta 1.0 */
-        .sidebar { width: 380px; background: var(--panel); border-right: 1px solid var(--border); padding: 25px; display: flex; flex-direction: column; box-shadow: 5px 0 15px rgba(0,0,0,0.5); }
-        h1 { font-size: 22px; margin: 0 0 20px 0; letter-spacing: 2px; border-bottom: 2px solid var(--neon); padding-bottom: 10px; }
+        .sidebar { width: 400px; background: var(--panel); border-right: 1px solid var(--border); padding: 25px; display: flex; flex-direction: column; box-shadow: 5px 0 15px rgba(0,0,0,0.5); overflow-y: auto;}
+        h1 { font-size: 20px; margin: 0 0 20px 0; letter-spacing: 2px; border-bottom: 2px solid var(--neon); padding-bottom: 10px; display: flex; justify-content: space-between; }
         
-        .stat-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-        .stat-card { background: #000; padding: 15px; border-radius: 8px; border: 1px solid var(--border); }
-        .stat-label { font-size: 10px; color: #888; text-transform: uppercase; }
-        .stat-val { font-size: 18px; font-weight: bold; margin-top: 5px; }
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: #000; padding: 12px; border-radius: 6px; border: 1px solid var(--border); }
+        .stat-label { font-size: 9px; color: #888; text-transform: uppercase; }
+        .stat-val { font-size: 16px; font-weight: bold; margin-top: 4px; color: #fff; }
+        .highlight { color: var(--neon); }
+        .cyan-val { color: var(--cyan); }
 
         .input-group { margin-bottom: 15px; }
-        label { display: block; font-size: 11px; margin-bottom: 5px; color: #aaa; }
-        input { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 12px; border-radius: 5px; box-sizing: border-box; transition: 0.3s; }
-        input:focus { border-color: var(--neon); outline: none; }
+        label { display: block; font-size: 10px; margin-bottom: 5px; color: #aaa; text-transform: uppercase; }
+        input { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 4px; box-sizing: border-box; font-family: monospace; }
+        
+        .btn-main { background: var(--neon); color: #000; border: none; padding: 15px; width: 100%; border-radius: 4px; font-weight: 900; cursor: pointer; text-transform: uppercase; margin-bottom: 10px; }
+        .btn-sub { background: transparent; color: #888; border: 1px solid #444; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 11px; margin-bottom: 5px; }
+        .btn-sub:hover { border-color: var(--neon); color: var(--neon); }
 
-        .btn-main { background: var(--neon); color: #000; border: none; padding: 18px; width: 100%; border-radius: 5px; font-weight: 900; cursor: pointer; text-transform: uppercase; margin-bottom: 10px; transition: 0.2s; }
-        .btn-main:hover { background: #00cc33; transform: translateY(-2px); }
-        .btn-sub { background: transparent; color: var(--neon); border: 1px solid var(--neon); padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; font-size: 12px; }
-
-        /* Area Log */
         .main-view { flex-grow: 1; display: flex; flex-direction: column; background: #000; }
-        .log-header { padding: 15px 25px; background: #111; border-bottom: 1px solid var(--border); font-size: 12px; display: flex; justify-content: space-between; }
-        #log { flex-grow: 1; padding: 25px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.6; color: #ccc; }
-        .log-entry { margin-bottom: 8px; border-left: 2px solid #222; padding-left: 10px; }
-        .log-success { color: var(--neon); border-left-color: var(--neon); }
-        .log-tx { color: #00f2ff; font-size: 10px; }
+        .log-header { padding: 12px 25px; background: #111; border-bottom: 1px solid var(--border); font-size: 11px; display: flex; justify-content: space-between; color: #666; }
+        #log { flex-grow: 1; padding: 20px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 11px; line-height: 1.5; color: #adbac7; }
+        .log-entry { margin-bottom: 6px; padding-left: 10px; border-left: 1px solid #222; }
+        .log-success { color: var(--neon); border-left-color: var(--neon); font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h1>MATRIOSKA <span style="font-weight: 100;">BETA 1.0</span></h1>
+    <h1>MATRIOSKA <span style="font-weight: 100;">BETA 1.1</span></h1>
     
-    <div class="stat-group">
+    <div class="stat-grid">
         <div class="stat-card">
-            <div class="stat-label">Generazione</div>
+            <div class="stat-label">Figlie Create</div>
+            <div id="countDaughters" class="stat-val highlight">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Generazione Attuale</div>
             <div id="displayGen" class="stat-val">--</div>
         </div>
+    </div>
+
+    <div class="stat-card" style="margin-bottom: 15px;">
+        <div class="stat-label">Volume Token Ereditati (Totali)</div>
+        <div id="totalTokens" class="stat-val cyan-val">0.00 MATRI</div>
+    </div>
+
+    <div class="stat-grid">
         <div class="stat-card">
             <div class="stat-label">Saldo PAS</div>
             <div id="displayBal" class="stat-val">0.00</div>
         </div>
-    </div>
-
-    <div class="stat-card" style="margin-bottom: 20px;">
-        <div class="stat-label">Autonomia Stimata</div>
-        <div id="displayAutonomy" class="stat-val" style="color: #00f2ff;">--- cicli</div>
+        <div class="stat-card">
+            <div class="stat-label">Autonomia</div>
+            <div id="displayAutonomy" class="stat-val" style="font-size: 13px;">-- cicli</div>
+        </div>
     </div>
 
     <div class="input-group">
-        <label>Contratto Corrente (Target)</label>
+        <label>Contratto Matrioska (Target)</label>
         <input type="text" id="targetAddr" placeholder="0x...">
     </div>
 
@@ -66,21 +75,23 @@
         <input type="password" id="pKey" placeholder="0x...">
     </div>
 
-    <button class="btn-main" onclick="startInfection()">⚡ Avvia Sequenza</button>
-    <button class="btn-sub" onclick="loadLastSaved()">📂 Recupera Ultima Figlia</button>
+    <button class="btn-main" onclick="startInfection()">🚀 Avvia Protocollo V39</button>
+    <button class="btn-sub" onclick="loadLastSaved()">📂 Recupera Ultima Memoria</button>
+    <button class="btn-sub" onclick="clearStats()">🧹 Reset Contatori Sessione</button>
     
-    <p style="font-size: 9px; color: #555; text-align: center; margin-top: 20px;">
-        PASEO ASSET HUB - PROTOCOLLO RICORSIVO V38.1
-    </p>
+    <div style="font-size: 9px; color: #444; margin-top: 15px;">
+        NETWORK: Paseo Asset Hub<br>
+        TOKEN DISTRIBUTION: 30% Spam / 70% Inheritance
+    </div>
 </div>
 
 <div class="main-view">
     <div class="log-header">
-        <span>STATUS: <span id="statusTxt" style="color: #ff9900;">IDLE</span></span>
-        <span>TERMINALE ATTIVO</span>
+        <span>STATUS: <span id="statusTxt" style="color: #ff9900;">IN ATTESA</span></span>
+        <span id="lastTx">--</span>
     </div>
     <div id="log">
-        <div class="log-entry">Benvenuto, Operatore. Caricare il contratto Gen 0 per iniziare.</div>
+        <div class="log-entry">Terminale pronto. Inserire indirizzo V39 per iniziare il tracciamento dei token reali.</div>
     </div>
 </div>
 
@@ -89,9 +100,13 @@
     const ABI = [
         "function spawn(address[] t) external", 
         "function gen() view returns (uint256)", 
-        "event NewGen(address indexed daughter, uint256 g)"
+        "event NewGen(address indexed daughter, uint256 g)",
+        "event Transfer(address indexed from, address indexed to, uint256 value)"
     ];
+    
     let isRunning = false;
+    let daughterCount = 0;
+    let totalInherited = 0;
 
     function log(msg, type = "") {
         const l = document.getElementById('log');
@@ -101,28 +116,35 @@
         l.insertBefore(div, l.firstChild);
     }
 
-    // MEMORIA: Carica l'ultimo indirizzo salvato
     function loadLastSaved() {
-        const saved = localStorage.getItem('last_matrioska');
+        const saved = localStorage.getItem('last_matrioska_v39');
         if (saved) {
             document.getElementById('targetAddr').value = saved;
-            log("Memoria recuperata: " + saved, "success");
-        } else {
-            log("Nessun dato in memoria.");
+            log("Indirizzo V39 caricato dalla cache.", "success");
         }
+    }
+
+    function clearStats() {
+        daughterCount = 0;
+        totalInherited = 0;
+        updateUI();
+        log("Contatori resettati.");
+    }
+
+    function updateUI() {
+        document.getElementById('countDaughters').innerText = daughterCount;
+        document.getElementById('totalTokens').innerText = totalInherited.toLocaleString(undefined, {minimumFractionDigits: 2}) + " MATRI";
     }
 
     async function startInfection() {
         if(isRunning) return;
         const addr = document.getElementById('targetAddr').value.trim();
         const pkey = document.getElementById('pKey').value.trim();
-        
-        if(!addr || !pkey) return log("ERRORE: Inserire Indirizzo e Chiave Privata.", "err");
+        if(!addr || !pkey) return log("ERRORE: Dati mancanti.", "err");
 
-        document.getElementById('statusTxt').innerText = "RUNNING";
+        document.getElementById('statusTxt').innerText = "LIVE";
         document.getElementById('statusTxt').style.color = "#00ff41";
         isRunning = true;
-        
         runLoop(addr, pkey);
     }
 
@@ -134,44 +156,63 @@
             const wallet = new ethers.Wallet(pkey, provider);
             const contract = new ethers.Contract(addr, ABI, wallet);
 
-            // Telemetria Saldo
+            // 1. Update Saldo PAS
             const bal = await provider.getBalance(wallet.address);
             const ethBal = parseFloat(ethers.formatEther(bal));
-            document.getElementById('displayBal').innerText = ethBal.toFixed(3);
+            document.getElementById('displayBal').innerText = ethBal.toFixed(4);
 
-            // Telemetria Gen
+            // 2. Info Contratto
             const gen = await contract.gen();
             document.getElementById('displayGen').innerText = gen;
 
-            log(`Attivazione Generazione ${gen}...`);
+            log(`Esecuzione Generazione ${gen}...`);
             const targets = Array.from({length: 10}, () => ethers.Wallet.createRandom().address);
 
-            const tx = await contract.spawn(targets, { gasLimit: 8000000 });
-            log(`<span class="log-tx">TX: ${tx.hash}</span>`);
+            // 3. Esecuzione (Token reali on-chain)
+            const tx = await contract.spawn(targets, { gasLimit: 9000000 });
+            document.getElementById('lastTx').innerText = "Last TX: " + tx.hash.substring(0,16) + "...";
             
             const receipt = await tx.wait();
             
-            // Calcolo Autonomia
-            const cost = parseFloat(ethers.formatEther(receipt.gasUsed * receipt.gasPrice));
-            document.getElementById('displayAutonomy').innerText = Math.floor(ethBal / cost) + " cicli";
-
-            // Trova Figlia
-            const event = receipt.logs.find(l => l.topics[0] === ethers.id("NewGen(address,uint256)"));
-            const daughter = ethers.getAddress("0x" + event.topics[1].slice(26));
-
-            log(`FIGLIA RILEVATA: ${daughter}`, "success");
+            // 4. Analisi Log per Token
+            const transferTopic = ethers.id("Transfer(address,address,uint256)");
+            const newGenTopic = ethers.id("NewGen(address,uint256)");
             
-            // SALVATAGGIO IN MEMORIA
-            localStorage.setItem('last_matrioska', daughter);
-            document.getElementById('targetAddr').value = daughter;
+            let daughterAddr = "";
+            
+            receipt.logs.forEach(l => {
+                if (l.topics[0] === newGenTopic) {
+                    daughterAddr = ethers.getAddress("0x" + l.topics[1].slice(26));
+                }
+            });
 
-            // Batch delay corto per stabilità
-            setTimeout(() => runLoop(daughter, pkey), 3000);
+            // Calcolo eredità alla figlia (il log di trasferimento verso la figlia)
+            receipt.logs.forEach(l => {
+                if (l.topics[0] === transferTopic) {
+                    const to = ethers.getAddress("0x" + l.topics[2].slice(26));
+                    if (to === daughterAddr) {
+                        const val = Number(ethers.formatEther(l.data));
+                        totalInherited += val;
+                    }
+                }
+            });
+
+            daughterCount++;
+            updateUI();
+
+            log(`GENERATA FIGLIA ${gen}: ${daughterAddr}`, "success");
+            log(`TOKEN TRASFERITI ALLA FIGLIA: 700.000 (70%)`, "success");
+
+            // Salvataggio
+            localStorage.setItem('last_matrioska_v39', daughterAddr);
+            document.getElementById('targetAddr').value = daughterAddr;
+
+            setTimeout(() => runLoop(daughterAddr, pkey), 4000);
 
         } catch (e) {
-            log("INTERRUZIONE: " + e.message, "err");
+            log("STOP: " + e.message, "err");
             isRunning = false;
-            document.getElementById('statusTxt').innerText = "STOPPED";
+            document.getElementById('statusTxt').innerText = "OFFLINE";
             document.getElementById('statusTxt').style.color = "#ff0055";
         }
     }
