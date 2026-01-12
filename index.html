@@ -2,34 +2,48 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>OBSIDIAN V27 | RECURSIVE DEPLOYER</title>
+    <title>OBSIDIAN V27.1 | RECURSIVE MONITOR</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --neon: #00ff41; --bg: #050505; }
-        body { background: var(--bg); color: var(--neon); font-family: 'JetBrains Mono', monospace; padding: 20px; }
-        .monitor { border: 1px solid var(--neon); padding: 20px; height: 60vh; overflow-y: auto; background: #000; box-shadow: 0 0 15px rgba(0,255,65,0.2); }
-        .controls { margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        input { background: #111; border: 1px solid #333; color: #fff; padding: 10px; }
-        button { background: var(--neon); color: #000; border: none; padding: 15px; font-weight: bold; cursor: pointer; }
-        .stat-box { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.8em; opacity: 0.8; }
-        .highlight { color: #fff; font-weight: bold; }
+        :root { --neon: #00ff41; --bg: #050505; --panel: #111; }
+        body { background: var(--bg); color: var(--neon); font-family: 'JetBrains Mono', monospace; margin: 0; display: grid; grid-template-columns: 400px 1fr; height: 100vh; }
+        .sidebar { background: var(--panel); border-right: 1px solid #222; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        #monitor { background: #000; padding: 20px; overflow-y: auto; color: #adbac7; font-size: 11px; line-height: 1.6; }
+        .stat-card { background: #000; border: 1px solid #222; padding: 10px; border-radius: 4px; }
+        .stat-label { font-size: 9px; color: #555; text-transform: uppercase; }
+        .stat-val { font-size: 16px; color: var(--neon); font-weight: bold; }
+        input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; box-sizing: border-box; }
+        button { background: var(--neon); color: #000; padding: 20px; border: none; font-weight: 900; cursor: pointer; border-radius: 4px; text-transform: uppercase; }
+        .log-new { color: #fff; background: #004400; padding: 2px 5px; }
     </style>
 </head>
 <body>
-    <h1>RECURSIVE DEPLOYER V27</h1>
+
+<div class="sidebar">
+    <h2 style="margin:0; color:var(--neon)">VIPER V27.1</h2>
     
-    <div class="controls">
-        <input type="text" id="masterAddr" placeholder="Indirizzo Madre Iniziale">
-        <input type="password" id="pKey" placeholder="Private Key (0xa036...)">
+    <div class="stat-card">
+        <div class="stat-label">Saldo Residuo PAS</div>
+        <div id="valBalance" class="stat-val">0.000</div>
     </div>
-    <button onclick="startRecursion()">⚡ INIZIA DEPLOY INFINITO</button>
-
-    <div class="stat-box">
-        <span>CONTRATTO ATTIVO: <span id="curAddr" class="highlight">---</span></span>
-        <span>GENERAZIONE: <span id="curGen" class="highlight">0</span></span>
+    <div class="stat-card">
+        <div class="stat-label">Costo Ultimo Deploy</div>
+        <div id="valGas" class="stat-val">---</div>
     </div>
 
-    <div id="monitor" class="monitor">> In attesa di input...</div>
+    <label class="stat-label">Indirizzo Madre Attiva</label>
+    <input type="text" id="masterAddr" placeholder="0x...">
+    
+    <label class="stat-label">Chiave Privata Master</label>
+    <input type="password" id="pKey" placeholder="0x...">
+
+    <button onclick="startRecursion()">Inizia Deploy Infinito</button>
+    <div style="font-size: 10px; color: #444; margin-top: auto;">Network: Paseo Asset Hub</div>
+</div>
+
+<div id="monitor">
+    <div>> Terminale pronto. In attesa di segnale...</div>
+</div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
@@ -44,19 +58,26 @@
     function log(msg, color = "") {
         const m = document.getElementById('monitor');
         const style = color ? `style="color:${color}"` : "";
-        m.innerHTML = `<div ${style}>[${new Date().toLocaleTimeString()}] ${msg}</div>` + m.innerHTML;
+        m.innerHTML = `<div>[${new Date().toLocaleTimeString()}] <span ${style}>${msg}</span></div>` + m.innerHTML;
+    }
+
+    async function updateStats(provider, wallet, receipt = null) {
+        const bal = await provider.getBalance(wallet.address);
+        document.getElementById('valBalance').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
+        if(receipt) {
+            document.getElementById('valGas').innerText = receipt.gasUsed.toString();
+        }
     }
 
     async function startRecursion() {
         if(running) return;
         running = true;
-        log("SISTEMA AVVIATO. Protocollo Matrioska in corso...", "#00ff41");
+        log("PROTOCOLLO MATRIOSKA ATTIVATO", "var(--neon)");
         loop();
     }
 
     async function loop() {
         if(!running) return;
-        
         const addr = document.getElementById('masterAddr').value.trim();
         const key = document.getElementById('pKey').value.trim();
 
@@ -65,22 +86,19 @@
             const wallet = new ethers.Wallet(key, provider);
             const contract = new ethers.Contract(addr, ABI, wallet);
 
-            // 1. Lettura dati attuali
+            await updateStats(provider, wallet);
             const gen = await contract.generation();
-            document.getElementById('curAddr').innerText = addr.substring(0,10) + "...";
-            document.getElementById('curGen').innerText = gen;
 
-            log(`ORDINE: Generazione ${gen} -> Comandando il deploy della prossima figlia...`);
+            log(`GENERAZIONE ${gen}: Comandando il deploy della figlia...`);
 
-            // 2. Comando di deploy alla Madre attuale
-            // Aumentiamo il gas limit perché il deploy di un nuovo contratto è costoso
-            const tx = await contract.spawnNext({ gasLimit: 5000000 });
-            log(`TX Inviata: ${tx.hash.substring(0,20)}...`);
+            // Il deploy reale richiede molto gas (usiamo 8M per sicurezza)
+            const tx = await contract.spawnNext({ gasLimit: 8000000 });
+            log(`TX Broadcast: ${tx.hash.substring(0,30)}...`);
             
             const receipt = await tx.wait();
-            log("Confermato! Estrazione indirizzo figlia...", "yellow");
+            await updateStats(provider, wallet, receipt);
 
-            // 3. Intercettazione dell'evento per trovare la Figlia
+            // Intercettiamo l'indirizzo della figlia
             const topic = ethers.id("NewGeneration(address,uint256)");
             const event = receipt.logs.find(l => l.topics[0] === topic);
             
@@ -88,15 +106,14 @@
                 const daughterAddr = ethers.getAddress("0x" + event.topics[1].slice(26));
                 log(`FIGLIA NATA: ${daughterAddr}`, "#fff");
                 
-                // 4. Salto generazionale: il terminale ora punta alla figlia
+                // Salto generazionale
                 document.getElementById('masterAddr').value = daughterAddr;
-                
-                log("Spostamento su nuova generazione tra 5 secondi...");
-                setTimeout(loop, 5000);
+                log("Sincronizzazione completata. Prossimo ciclo tra 10s...");
+                setTimeout(loop, 10000);
             }
 
         } catch (e) {
-            log("ERRORE CRITICO: " + e.message, "red");
+            log("ERRORE: " + e.message, "red");
             running = false;
         }
     }
