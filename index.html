@@ -2,147 +2,272 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>SPAMTEST | COMMAND CENTER v5</title>
+    <title>SPAMTEST | COMMAND CONSOLE v7</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --neon: #00ff41; --alert: #ff003c; --bg: #050505; --grey: #1a1a1a; }
-        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; display: grid; grid-template-columns: 1fr 400px; gap: 10px; padding: 10px; margin: 0; }
-        .panel { border: 1px solid var(--neon); padding: 15px; background: rgba(0,0,0,0.9); }
-        .header { grid-column: 1 / span 2; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--neon); padding-bottom: 10px; margin-bottom: 10px; }
-        textarea { width: 100%; height: 200px; background: #000; color: var(--neon); border: 1px solid var(--grey); padding: 10px; box-sizing: border-box; }
-        button { padding: 12px; cursor: pointer; border: none; font-weight: bold; transition: 0.3s; text-transform: uppercase; }
-        .btn-connect { background: var(--neon); color: #000; }
-        .btn-auto { background: var(--alert); color: #fff; }
-        .btn-blast { background: #fff; color: #000; font-size: 1.2em; }
-        #monitor { height: 500px; overflow-y: auto; background: #000; font-size: 11px; padding: 10px; border: 1px solid var(--grey); }
-        .auto-active { box-shadow: 0 0 20px var(--alert); border-color: var(--alert); }
+        :root {
+            --neon-green: #00ff41;
+            --dark-red: #8b0000;
+            --alert-red: #ff3131;
+            --bg-black: #0d0d0d;
+            --panel-bg: #1a1a1a;
+        }
+
+        body {
+            background-color: var(--bg-black);
+            color: var(--neon-green);
+            font-family: 'Segoe UI', 'Courier New', monospace;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar Controllo */
+        .sidebar {
+            width: 450px;
+            background: var(--panel-bg);
+            border-right: 2px solid #333;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 10px 0 20px rgba(0,0,0,0.5);
+        }
+
+        h1 {
+            font-size: 1.5em;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin: 0;
+            color: #fff;
+            border-left: 5px solid var(--neon-green);
+            padding-left: 15px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 0.8em;
+            text-transform: uppercase;
+            color: #888;
+        }
+
+        input, textarea {
+            background: #000;
+            border: 1px solid #444;
+            color: var(--neon-green);
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--neon-green);
+            outline: none;
+        }
+
+        .btn {
+            padding: 15px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+
+        .btn-start {
+            background: var(--neon-green);
+            color: #000;
+        }
+
+        .btn-start:hover {
+            box-shadow: 0 0 20px var(--neon-green);
+            background: #fff;
+        }
+
+        .btn-stop {
+            background: var(--dark-red);
+            color: #fff;
+        }
+
+        .status-badge {
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.7em;
+            background: #333;
+            display: inline-block;
+        }
+
+        /* Monitor Log */
+        .main-content {
+            flex-grow: 1;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #monitor {
+            flex-grow: 1;
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        .log-entry {
+            border-bottom: 1px solid #1a1a1a;
+            padding: 5px 0;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .log-time { color: #555; margin-right: 10px; }
+        .log-info { color: var(--neon-green); }
+        .log-success { color: #fff; background: #004d00; padding: 2px 5px; border-radius: 3px; }
+        .log-error { color: var(--alert-red); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
 
-<div class="header panel">
-    <div>
-        <h2 style="margin:0">☣️ SPAMTEST CONTROL UNIT</h2>
-        <small id="netStatus">Network: Offline</small>
+<div class="sidebar">
+    <h1>System Alpha</h1>
+    <div id="statusIndicator" class="status-badge">STANDBY</div>
+
+    <div class="input-group">
+        <label>Private Key (RAM Only)</label>
+        <input type="password" id="privKey" placeholder="0x...">
     </div>
-    <div id="walletInfo">
-        <button class="btn-connect" onclick="connectWallet()">Connect MetaMask</button>
+
+    <div class="input-group">
+        <label>Target Acquired</label>
+        <textarea id="targetList" rows="8" placeholder="Scansione automatica o inserimento manuale..."></textarea>
+    </div>
+
+    <div class="input-group">
+        <label>Frequenza Blast (secondi)</label>
+        <input type="number" id="freq" value="60">
+    </div>
+
+    <button id="actionBtn" class="btn btn-start" onclick="toggleBot()">Avvia Protocollo</button>
+    
+    <div style="margin-top: auto; font-size: 0.7em; color: #444;">
+        FACTORY: 0x70c43bf1e1ae424c2f6cfe8df57ffc931462270f<br>
+        OWNER: 0xa036B32c86E2aB7F2AdE9ACC15984B2A2DDe8977
     </div>
 </div>
 
-<div class="left-col">
-    <div id="controlPanel" class="panel">
-        <div style="margin-bottom:15px">
-            <label>TARGET LIST:</label>
-            <textarea id="targetList" placeholder="Indirizzi acquisiti..."></textarea>
-        </div>
-        
-        <button class="btn-auto" id="autoBtn" onclick="toggleAutoPilot()" disabled>Attiva Auto-Pilot (OFF)</button>
-        <button style="background:var(--grey); color:white; width:100%" onclick="scrapeTarget()">Forza Scrape Rete</button>
-        
-        <hr style="border:1px solid var(--grey); margin:20px 0">
-        
-        <button class="btn-blast" id="blastBtn" onclick="launchBlast()" disabled>🔥 Lancia Blast Manuale 🔥</button>
-    </div>
-</div>
-
-<div class="right-col">
-    <div class="panel">
-        <h3>SYSTEM LOGS</h3>
-        <div id="monitor"></div>
+<div class="main-content">
+    <div id="monitor">
+        <div class="log-entry"><span class="log-info">Console inizializzata. In attesa di autorizzazione...</span></div>
     </div>
 </div>
 
 <script>
     const FACTORY_ADDR = "0x70c43bf1e1ae424c2f6cfe8df57ffc931462270f";
     const ABI = ["function launchBlast(address[] memory targets, uint256 amount) external"];
-    const MASTER_OWNER = "0xa036B32c86E2aB7F2AdE9ACC15984B2A2DDe8977";
+    const RPC_URL = "https://paseo.rpc.amforc.com";
     
-    let provider, signer, factoryContract, autoPilot = false;
+    let botActive = false;
+    let wallet, factoryContract, provider;
 
-    async function connectWallet() {
-        if (!window.ethereum) return alert("Installa MetaMask!");
+    function addLog(msg, type = 'info') {
+        const monitor = document.getElementById('monitor');
+        const now = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = 'log-entry';
         
-        try {
-            provider = new ethers.BrowserProvider(window.ethereum);
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            signer = await provider.getSigner();
-            const addr = await signer.getAddress();
-            
-            document.getElementById('walletInfo').innerHTML = `<span>User: ${addr.substring(0,6)}...${addr.substring(38)}</span>`;
-            document.getElementById('netStatus').innerText = "Network: Connected";
-            
-            factoryContract = new ethers.Contract(FACTORY_ADDR, ABI, signer);
-            
-            // Abilita i tasti
-            document.getElementById('autoBtn').disabled = false;
-            document.getElementById('blastBtn').disabled = false;
-            
-            log("Wallet Connesso. Sistema Armato.");
-            if(addr.toLowerCase() !== MASTER_OWNER.toLowerCase()) {
-                log("ATTENZIONE: Non sei il Master Owner. Le transazioni falliranno.", "var(--alert)");
+        let content = `<span class="log-time">[${now}]</span>`;
+        if(type === 'success') content += `<span class="log-success">${msg}</span>`;
+        else if(type === 'error') content += `<span class="log-error">!! ${msg}</span>`;
+        else content += `<span class="log-info">> ${msg}</span>`;
+        
+        entry.innerHTML = content;
+        monitor.prepend(entry);
+    }
+
+    async function toggleBot() {
+        const key = document.getElementById('privKey').value;
+        const btn = document.getElementById('actionBtn');
+        const status = document.getElementById('statusIndicator');
+
+        if (!botActive) {
+            if (!key.startsWith('0x') || key.length < 64) {
+                addLog("Chiave privata non valida", "error");
+                return;
             }
-        } catch (e) {
-            log("Connessione fallita: " + e.message, "var(--alert)");
+
+            try {
+                provider = new ethers.JsonRpcProvider(RPC_URL);
+                wallet = new ethers.Wallet(key, provider);
+                factoryContract = new ethers.Contract(FACTORY_ADDR, ABI, wallet);
+                
+                botActive = true;
+                btn.innerText = "Arresta Protocollo";
+                btn.className = "btn btn-stop";
+                status.innerText = "ACTIVE";
+                status.style.background = var(--dark-red);
+                
+                addLog(`Bot collegato: ${wallet.address}`);
+                runCycle();
+            } catch (e) {
+                addLog("Errore connessione: " + e.message, "error");
+            }
+        } else {
+            botActive = false;
+            btn.innerText = "Avvia Protocollo";
+            btn.className = "btn btn-start";
+            status.innerText = "STANDBY";
+            status.style.background = "#333";
+            addLog("Protocollo terminato dall'utente.");
         }
     }
 
-    function log(msg, color = "") {
-        const m = document.getElementById('monitor');
-        m.innerHTML = `<div style="color:${color}">[${new Date().toLocaleTimeString()}] ${msg}</div>` + m.innerHTML;
-    }
-
-    async function scrapeTarget() {
-        log("Scansione blocchi in corso...");
-        // Logica dummy per test: in produzione pescherà tx reali
+    async function scrapeTargets() {
+        addLog("Scansione rete in corso...");
+        // Simulazione scraping veloce
         let t = [];
-        for(let i=0; i<8; i++) t.push(ethers.Wallet.createRandom().address);
+        for(let i=0; i<12; i++) t.push(ethers.Wallet.createRandom().address);
         document.getElementById('targetList').value = t.join("\n");
-        log(`Acquisiti ${t.length} target attivi.`);
         return t;
     }
 
-    async function launchBlast() {
-        const t = document.getElementById('targetList').value.split("\n").filter(x => x.startsWith("0x"));
-        if(t.length === 0) return log("Errore: Nessun target.", "orange");
+    async function runCycle() {
+        if (!botActive) return;
+
+        const targets = await scrapeTargets();
+        const freq = document.getElementById('freq').value * 1000;
 
         try {
-            log("Inizio transazione...");
-            // Usiamo un gasLimit forzato per bypassare errori di stima su Paseo
-            const tx = await factoryContract.launchBlast(t, 1000000, { gasLimit: 2000000 });
-            log("Transazione Inviata! Hash: " + tx.hash.substring(0,16) + "...", "cyan");
+            addLog(`Esecuzione Blast su ${targets.length} targets...`);
+            const tx = await factoryContract.launchBlast(targets, 1000000, { gasLimit: 2000000 });
+            addLog(`TX Inviata: ${tx.hash.substring(0,25)}...`, "success");
+            
             await tx.wait();
-            log("SUCCESSO: Blast eseguito sul clone.", "var(--neon)");
+            addLog("Conferma ricevuta. Contratti creati correttamente.", "success");
         } catch (e) {
-            log("FAIL: " + e.message, "var(--alert)");
+            addLog("Errore Blast: " + (e.reason || e.message), "error");
         }
-    }
 
-    function toggleAutoPilot() {
-        autoPilot = !autoPilot;
-        const b = document.getElementById('autoBtn');
-        const p = document.getElementById('controlPanel');
-        
-        if(autoPilot) {
-            b.innerText = "Disattiva Auto-Pilot (ON)";
-            b.style.background = "#fff"; b.style.color = "#000";
-            p.classList.add('auto-active');
-            log("MODALITÀ AUTOMATICA ATTIVATA.", "yellow");
-            runCycle();
-        } else {
-            b.innerText = "Attiva Auto-Pilot (OFF)";
-            b.style.background = "var(--alert)"; b.style.color = "#fff";
-            p.classList.remove('auto-active');
-            log("Modalità automatica disattivata.");
+        if (botActive) {
+            addLog(`Prossimo ciclo tra ${freq/1000} secondi...`);
+            setTimeout(runCycle, freq);
         }
-    }
-
-    async function runCycle() {
-        if(!autoPilot) return;
-        await scrapeTarget();
-        await launchBlast();
-        log("Attesa 60 secondi per il prossimo ciclo...");
-        setTimeout(runCycle, 60000);
     }
 </script>
 </body>
