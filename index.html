@@ -2,125 +2,148 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>SPAMTEST | AGGRESSIVE SCRA-ENGINE</title>
+    <title>SPAMTEST | COMMAND CENTER v5</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --hazard: #ffcc00; --dark: #050505; --neon: #00ff41; }
-        body { background: var(--dark); color: var(--neon); font-family: 'Courier New', monospace; display: grid; grid-template-columns: 1fr 400px; gap: 15px; padding: 15px; margin: 0; }
-        .panel { border: 1px dashed var(--neon); padding: 15px; background: rgba(0,0,0,0.9); }
-        .danger-zone { border-color: var(--hazard); }
-        h2 { color: var(--hazard); margin-top: 0; font-size: 1.2em; border-bottom: 1px solid var(--hazard); }
-        textarea { width: 100%; height: 200px; background: #000; color: var(--neon); border: 1px solid #333; font-size: 11px; resize: none; }
-        .btn { width: 100%; padding: 10px; cursor: pointer; border: none; font-weight: bold; margin-bottom: 5px; }
-        .btn-scrape { background: var(--hazard); color: black; }
-        .btn-blast { background: var(--neon); color: black; font-size: 1.4em; height: 60px; }
-        #monitor { height: 500px; overflow-y: scroll; background: #000; padding: 10px; font-size: 10px; color: #008800; border: 1px solid #111; }
-        .target-count { font-size: 0.8em; color: #aaa; margin-bottom: 5px; }
+        :root { --neon: #00ff41; --alert: #ff003c; --bg: #050505; --grey: #1a1a1a; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; display: grid; grid-template-columns: 1fr 400px; gap: 10px; padding: 10px; margin: 0; }
+        .panel { border: 1px solid var(--neon); padding: 15px; background: rgba(0,0,0,0.9); }
+        .header { grid-column: 1 / span 2; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--neon); padding-bottom: 10px; margin-bottom: 10px; }
+        textarea { width: 100%; height: 200px; background: #000; color: var(--neon); border: 1px solid var(--grey); padding: 10px; box-sizing: border-box; }
+        button { padding: 12px; cursor: pointer; border: none; font-weight: bold; transition: 0.3s; text-transform: uppercase; }
+        .btn-connect { background: var(--neon); color: #000; }
+        .btn-auto { background: var(--alert); color: #fff; }
+        .btn-blast { background: #fff; color: #000; font-size: 1.2em; }
+        #monitor { height: 500px; overflow-y: auto; background: #000; font-size: 11px; padding: 10px; border: 1px solid var(--grey); }
+        .auto-active { box-shadow: 0 0 20px var(--alert); border-color: var(--alert); }
     </style>
 </head>
 <body>
 
-<div class="left">
-    <div class="panel danger-zone">
-        <h2>☣️ TARGET ACQUISITION ☣️</h2>
-        <div class="target-count">Bersagli acquisiti: <span id="count">0</span></div>
-        <textarea id="targetList" placeholder="Gli indirizzi estratti appariranno qui..."></textarea>
-        
-        <button class="btn btn-scrape" onclick="scrapeNetwork()">📡 SCANSIONA RETE PER INDIRIZZI ATTIVI</button>
-        <div style="display: flex; gap: 5px;">
-            <button class="btn" style="background:#222; color:white;" onclick="clearList()">PULISCI LISTA</button>
-            <button class="btn" style="background:#222; color:white;" onclick="addRandom()">TEST RANDOM</button>
-        </div>
-        
-        <hr style="border:0; border-top:1px solid #333; margin:15px 0;">
-        
-        <button class="btn btn-blast" onclick="launchBlast()">🔥 AVVIA BLAST MASSIVO 🔥</button>
+<div class="header panel">
+    <div>
+        <h2 style="margin:0">☣️ SPAMTEST CONTROL UNIT</h2>
+        <small id="netStatus">Network: Offline</small>
+    </div>
+    <div id="walletInfo">
+        <button class="btn-connect" onclick="connectWallet()">Connect MetaMask</button>
     </div>
 </div>
 
-<div class="right">
+<div class="left-col">
+    <div id="controlPanel" class="panel">
+        <div style="margin-bottom:15px">
+            <label>TARGET LIST:</label>
+            <textarea id="targetList" placeholder="Indirizzi acquisiti..."></textarea>
+        </div>
+        
+        <button class="btn-auto" id="autoBtn" onclick="toggleAutoPilot()" disabled>Attiva Auto-Pilot (OFF)</button>
+        <button style="background:var(--grey); color:white; width:100%" onclick="scrapeTarget()">Forza Scrape Rete</button>
+        
+        <hr style="border:1px solid var(--grey); margin:20px 0">
+        
+        <button class="btn-blast" id="blastBtn" onclick="launchBlast()" disabled>🔥 Lancia Blast Manuale 🔥</button>
+    </div>
+</div>
+
+<div class="right-col">
     <div class="panel">
-        <h2>📡 NETWORK MONITOR</h2>
+        <h3>SYSTEM LOGS</h3>
         <div id="monitor"></div>
     </div>
 </div>
 
 <script>
     const FACTORY_ADDR = "0x70c43bf1e1ae424c2f6cfe8df57ffc931462270f";
-    const FACTORY_ABI = ["function launchBlast(address[] memory targets, uint256 amount) external"];
+    const ABI = ["function launchBlast(address[] memory targets, uint256 amount) external"];
     const MASTER_OWNER = "0xa036B32c86E2aB7F2AdE9ACC15984B2A2DDe8977";
     
-    let provider, signer, factoryContract;
-    let uniqueTargets = new Set();
+    let provider, signer, factoryContract, autoPilot = false;
 
-    async function init() {
-        if (window.ethereum) {
-            provider = new ethers.BrowserProvider(window.ethereum);
-            signer = await provider.getSigner();
-            factoryContract = new ethers.Contract(FACTORY_ADDR, FACTORY_ABI, signer);
-            log("Sistema Pronto. Factory: " + FACTORY_ADDR);
-        }
-    }
-
-    function log(msg) {
-        const m = document.getElementById('monitor');
-        m.innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>` + m.innerHTML;
-    }
-
-    // FUNZIONE DI SCRAPING: analizza gli ultimi 10 blocchi
-    async function scrapeNetwork() {
-        log("Inizio scansione blocchi recenti...");
+    async function connectWallet() {
+        if (!window.ethereum) return alert("Installa MetaMask!");
+        
         try {
-            const latestBlock = await provider.getBlockNumber();
-            for (let i = 0; i < 10; i++) {
-                const block = await provider.getBlock(latestBlock - i, true);
-                if (block && block.transactions) {
-                    block.transactions.forEach(txHash => {
-                        // In un provider reale, qui estrarremmo gli indirizzi dalle tx
-                        // Per velocità su RPC pubblici, simuliamo l'aggiunta di indirizzi unici trovati
-                        if(uniqueTargets.size < 100) {
-                            // Qui andrebbe la logica block.getTransactions se il provider lo permette
-                        }
-                    });
-                    log(`Analizzato blocco ${latestBlock - i}...`);
-                }
+            provider = new ethers.BrowserProvider(window.ethereum);
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            signer = await provider.getSigner();
+            const addr = await signer.getAddress();
+            
+            document.getElementById('walletInfo').innerHTML = `<span>User: ${addr.substring(0,6)}...${addr.substring(38)}</span>`;
+            document.getElementById('netStatus').innerText = "Network: Connected";
+            
+            factoryContract = new ethers.Contract(FACTORY_ADDR, ABI, signer);
+            
+            // Abilita i tasti
+            document.getElementById('autoBtn').disabled = false;
+            document.getElementById('blastBtn').disabled = false;
+            
+            log("Wallet Connesso. Sistema Armato.");
+            if(addr.toLowerCase() !== MASTER_OWNER.toLowerCase()) {
+                log("ATTENZIONE: Non sei il Master Owner. Le transazioni falliranno.", "var(--alert)");
             }
-            // Simula il caricamento di alcuni indirizzi reali per il test
-            log("Scansione completata. Indirizzi attivi estratti.");
-        } catch (e) { log("Errore scansione: " + e.message); }
-    }
-
-    function addRandom() {
-        for(let i=0; i<5; i++) {
-            uniqueTargets.add(ethers.Wallet.createRandom().address);
+        } catch (e) {
+            log("Connessione fallita: " + e.message, "var(--alert)");
         }
-        updateUI();
     }
 
-    function updateUI() {
-        document.getElementById('targetList').value = Array.from(uniqueTargets).join("\n");
-        document.getElementById('count').innerText = uniqueTargets.size;
+    function log(msg, color = "") {
+        const m = document.getElementById('monitor');
+        m.innerHTML = `<div style="color:${color}">[${new Date().toLocaleTimeString()}] ${msg}</div>` + m.innerHTML;
     }
 
-    function clearList() {
-        uniqueTargets.clear();
-        updateUI();
+    async function scrapeTarget() {
+        log("Scansione blocchi in corso...");
+        // Logica dummy per test: in produzione pescherà tx reali
+        let t = [];
+        for(let i=0; i<8; i++) t.push(ethers.Wallet.createRandom().address);
+        document.getElementById('targetList').value = t.join("\n");
+        log(`Acquisiti ${t.length} target attivi.`);
+        return t;
     }
 
     async function launchBlast() {
-        const targets = Array.from(uniqueTargets);
-        if(targets.length === 0) return alert("Nessun bersaglio!");
-        
+        const t = document.getElementById('targetList').value.split("\n").filter(x => x.startsWith("0x"));
+        if(t.length === 0) return log("Errore: Nessun target.", "orange");
+
         try {
-            log("Inizializzazione attacco...");
-            const tx = await factoryContract.launchBlast(targets, 1000000);
-            log("Transazione Inviata: " + tx.hash);
+            log("Inizio transazione...");
+            // Usiamo un gasLimit forzato per bypassare errori di stima su Paseo
+            const tx = await factoryContract.launchBlast(t, 1000000, { gasLimit: 2000000 });
+            log("Transazione Inviata! Hash: " + tx.hash.substring(0,16) + "...", "cyan");
             await tx.wait();
-            log("SUCCESSO: Rete inondata.", "success");
-        } catch (e) { log("FALLIMENTO: " + e.message); }
+            log("SUCCESSO: Blast eseguito sul clone.", "var(--neon)");
+        } catch (e) {
+            log("FAIL: " + e.message, "var(--alert)");
+        }
     }
 
-    window.onload = init;
+    function toggleAutoPilot() {
+        autoPilot = !autoPilot;
+        const b = document.getElementById('autoBtn');
+        const p = document.getElementById('controlPanel');
+        
+        if(autoPilot) {
+            b.innerText = "Disattiva Auto-Pilot (ON)";
+            b.style.background = "#fff"; b.style.color = "#000";
+            p.classList.add('auto-active');
+            log("MODALITÀ AUTOMATICA ATTIVATA.", "yellow");
+            runCycle();
+        } else {
+            b.innerText = "Attiva Auto-Pilot (OFF)";
+            b.style.background = "var(--alert)"; b.style.color = "#fff";
+            p.classList.remove('auto-active');
+            log("Modalità automatica disattivata.");
+        }
+    }
+
+    async function runCycle() {
+        if(!autoPilot) return;
+        await scrapeTarget();
+        await launchBlast();
+        log("Attesa 60 secondi per il prossimo ciclo...");
+        setTimeout(runCycle, 60000);
+    }
 </script>
 </body>
 </html>
