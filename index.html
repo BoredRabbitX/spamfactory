@@ -2,100 +2,101 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>VIPER TRACKER V33</title>
+    <title>VIPER V36 | TELEMETRY</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
         :root { --neon: #00ff41; --bg: #050505; }
-        body { background: var(--bg); color: var(--neon); font-family: monospace; display: grid; grid-template-columns: 400px 1fr; height: 100vh; margin: 0; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: grid; grid-template-columns: 350px 1fr; height: 100vh; }
         .sidebar { background: #111; border-right: 1px solid #333; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        #monitor { background: #000; padding: 20px; overflow-y: auto; font-size: 11px; color: #adbac7; }
-        .stat { border: 1px solid var(--neon); padding: 10px; margin-bottom: 5px; }
+        .telemetry { background: #000; border: 1px solid var(--neon); padding: 15px; border-radius: 4px; }
+        .t-label { font-size: 10px; color: #666; text-transform: uppercase; }
+        .t-val { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+        #log { background: #000; padding: 20px; overflow-y: auto; font-size: 11px; }
         input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 10px; box-sizing: border-box; }
-        button { background: var(--neon); color: #000; padding: 15px; border: none; font-weight: bold; cursor: pointer; width: 100%; }
-        .success { color: #fff; background: #005500; }
+        button { background: var(--neon); color: #000; padding: 20px; width: 100%; border: none; font-weight: bold; cursor: pointer; }
+        .success { color: #fff; background: #004400; padding: 2px 4px; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h2>VIPER V33</h2>
-    <div class="stat">GEN: <span id="displayGen">0</span></div>
-    <div class="stat">SALDO: <span id="displayBal">0</span> PAS</div>
+    <h2 style="margin:0">VIPER V36</h2>
     
-    <label>CONTRATTO CORRENTE</label>
-    <input type="text" id="targetAddr" placeholder="0x...">
-    <label>PRIVATE KEY</label>
-    <input type="password" id="pKey">
-    <button onclick="startLoop()">START AUTO-SEEKER</button>
+    <div class="telemetry">
+        <div class="t-label">Saldo PAS</div>
+        <div id="displayBal" class="t-val">0.000</div>
+        
+        <div class="t-label">Costo Medio Ciclo</div>
+        <div id="displayCost" class="t-val">---</div>
+        
+        <div class="t-label">Autonomia Stimata</div>
+        <div id="displayCycles" class="t-val">---</div>
+    </div>
+
+    <label class="t-label">Target Address</label>
+    <input type="text" id="target" placeholder="0x...">
+    <label class="t-label">Master Private Key</label>
+    <input type="password" id="key" placeholder="0x...">
+
+    <button onclick="ignite()">⚡ START AUTONOMOUS SPAM</button>
 </div>
 
-<div id="monitor">> In attesa di segnale...</div>
+<div id="log"></div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
-    const ABI = [
-        "function spawnNext(address[] targets) external",
-        "function generation() view returns (uint256)",
-        "event NewGeneration(address indexed daughter, uint256 gen)"
-    ];
+    const ABI = ["function spawn(address[] t) external", "function gen() view returns (uint256)", "event NewGen(address indexed daughter, uint256 g)"];
+    let isRunning = false;
+    let lastCost = 0;
 
-    let running = false;
-
-    function log(msg, cls="") {
-        const m = document.getElementById('monitor');
-        m.innerHTML = `<div class="${cls}">[${new Date().toLocaleTimeString()}] ${msg}</div>` + m.innerHTML;
+    function out(m, color="") {
+        const l = document.getElementById('log');
+        l.innerHTML = `<div>[${new Date().toLocaleTimeString()}] <span style="color:${color}">${m}</span></div>` + l.innerHTML;
     }
 
-    async function startLoop() {
-        if(running) return;
-        running = true;
-        log("SEQUENZA AVVIATA", "success");
-        execute();
-    }
+    async function ignite() {
+        if(isRunning) return; isRunning = true;
+        const provider = new ethers.JsonRpcProvider(RPC);
+        const wallet = new ethers.Wallet(document.getElementById('key').value.trim(), provider);
 
-    async function execute() {
-        if(!running) return;
-        const addr = document.getElementById('targetAddr').value.trim();
-        const key = document.getElementById('pKey').value.trim();
+        async function loop(addr) {
+            try {
+                // Telemetria Saldo
+                const balance = await provider.getBalance(wallet.address);
+                const balEth = parseFloat(ethers.formatEther(balance));
+                document.getElementById('displayBal').innerText = balEth.toFixed(4);
 
-        try {
-            const provider = new ethers.JsonRpcProvider(RPC);
-            const wallet = new ethers.Wallet(key, provider);
-            const contract = new ethers.Contract(addr, ABI, wallet);
+                if(lastCost > 0) {
+                    const cycles = Math.floor(balEth / lastCost);
+                    document.getElementById('displayCycles').innerText = cycles + " cicli";
+                }
 
-            // Telemetria
-            const gen = await contract.generation();
-            const bal = await provider.getBalance(wallet.address);
-            document.getElementById('displayGen').innerText = gen;
-            document.getElementById('displayBal').innerText = parseFloat(ethers.formatEther(bal)).toFixed(3);
-
-            const targets = Array.from({length: 5}, () => ethers.Wallet.createRandom().address);
-            log(`Attivazione Gen ${gen} su ${addr.substring(0,10)}...`);
-
-            const tx = await contract.spawnNext(targets, { gasLimit: 5000000 });
-            log(`TX: ${tx.hash.substring(0,20)}...`);
-            
-            const receipt = await tx.wait();
-            log(`Gas usato: ${receipt.gasUsed}`);
-
-            // LOGICA DI INSEGUIMENTO (Hunter)
-            const topic = ethers.id("NewGeneration(address,uint256)");
-            const birthLog = receipt.logs.find(l => l.topics[0] === topic);
-
-            if(birthLog) {
-                const daughter = ethers.getAddress("0x" + birthLog.topics[1].slice(26));
-                log(`FIGLIA TROVATA: ${daughter}`, "success");
+                const contract = new ethers.Contract(addr, ABI, wallet);
+                const currentGen = await contract.gen();
                 
-                // AGGIORNAMENTO AUTOMATICO CAMPO INPUT
-                document.getElementById('targetAddr').value = daughter;
+                const targets = Array.from({length: 10}, () => ethers.Wallet.createRandom().address);
+                out(`Esecuzione Gen ${currentGen} su ${addr.substring(0,10)}...`);
+
+                const tx = await contract.spawn(targets, { gasLimit: 8000000 });
+                out(`TX: ${tx.hash.substring(0,20)}...`, "#00f2ff");
                 
-                log("Salto alla prossima generazione tra 5s...");
-                setTimeout(execute, 5000);
-            }
-        } catch (e) {
-            log("ERRORE: " + e.message, "red");
-            running = false;
+                const receipt = await tx.wait();
+                
+                // Telemetria Costo
+                lastCost = parseFloat(ethers.formatEther(receipt.gasUsed * receipt.gasPrice));
+                document.getElementById('displayCost').innerText = lastCost.toFixed(6);
+
+                const event = receipt.logs.find(l => l.topics[0] === ethers.id("NewGen(address,uint256)"));
+                const daughter = ethers.getAddress("0x" + event.topics[1].slice(26));
+                
+                out(`FIGLIA NATA: ${daughter}`, "#fff");
+                document.getElementById('target').value = daughter;
+                
+                setTimeout(() => loop(daughter), 5000);
+
+            } catch (e) { out("ERRORE: " + e.message, "red"); isRunning = false; }
         }
+        loop(document.getElementById('target').value.trim());
     }
 </script>
 </body>
