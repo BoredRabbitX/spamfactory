@@ -2,218 +2,110 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>MATRIOSKA BETA 1.1 | VIPER TERMINAL</title>
+    <title>VIPER APOCALYPSE V41</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --neon: #00ff41; --bg: #0d0d0d; --panel: #1a1a1a; --border: #333; --cyan: #00f2ff; }
-        body { background: var(--bg); color: var(--neon); font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
-        
-        .sidebar { width: 400px; background: var(--panel); border-right: 1px solid var(--border); padding: 25px; display: flex; flex-direction: column; box-shadow: 5px 0 15px rgba(0,0,0,0.5); overflow-y: auto;}
-        h1 { font-size: 20px; margin: 0 0 20px 0; letter-spacing: 2px; border-bottom: 2px solid var(--neon); padding-bottom: 10px; display: flex; justify-content: space-between; }
-        
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .stat-card { background: #000; padding: 12px; border-radius: 6px; border: 1px solid var(--border); }
-        .stat-label { font-size: 9px; color: #888; text-transform: uppercase; }
-        .stat-val { font-size: 16px; font-weight: bold; margin-top: 4px; color: #fff; }
-        .highlight { color: var(--neon); }
-        .cyan-val { color: var(--cyan); }
-
-        .input-group { margin-bottom: 15px; }
-        label { display: block; font-size: 10px; margin-bottom: 5px; color: #aaa; text-transform: uppercase; }
-        input { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 4px; box-sizing: border-box; font-family: monospace; }
-        
-        .btn-main { background: var(--neon); color: #000; border: none; padding: 15px; width: 100%; border-radius: 4px; font-weight: 900; cursor: pointer; text-transform: uppercase; margin-bottom: 10px; }
-        .btn-sub { background: transparent; color: #888; border: 1px solid #444; padding: 8px; width: 100%; border-radius: 4px; cursor: pointer; font-size: 11px; margin-bottom: 5px; }
-        .btn-sub:hover { border-color: var(--neon); color: var(--neon); }
-
-        .main-view { flex-grow: 1; display: flex; flex-direction: column; background: #000; }
-        .log-header { padding: 12px 25px; background: #111; border-bottom: 1px solid var(--border); font-size: 11px; display: flex; justify-content: space-between; color: #666; }
-        #log { flex-grow: 1; padding: 20px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 11px; line-height: 1.5; color: #adbac7; }
-        .log-entry { margin-bottom: 6px; padding-left: 10px; border-left: 1px solid #222; }
-        .log-success { color: var(--neon); border-left-color: var(--neon); font-weight: bold; }
+        :root { --danger: #ff0000; --bg: #000; }
+        body { background: var(--bg); color: var(--danger); font-family: 'Courier New', monospace; margin: 0; display: grid; grid-template-columns: 420px 1fr; height: 100vh; }
+        .sidebar { background: #0a0000; border-right: 2px solid var(--danger); padding: 25px; box-shadow: 10px 0 20px rgba(255,0,0,0.2); }
+        #log { background: #000; padding: 20px; overflow-y: auto; font-size: 10px; color: #ff6666; text-shadow: 0 0 2px #ff0000; }
+        .stat-card { border: 1px solid var(--danger); padding: 15px; margin-bottom: 10px; background: #1a0000; }
+        .val { font-size: 26px; font-weight: 900; color: #fff; }
+        button { background: var(--danger); color: #fff; border: none; padding: 25px; width: 100%; font-weight: bold; cursor: pointer; font-size: 18px; letter-spacing: 3px; }
+        button:hover { background: #ff4444; }
+        .warning { animation: blink 0.5s infinite; color: #fff; font-weight: bold; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h1>MATRIOSKA <span style="font-weight: 100;">BETA 1.1</span></h1>
+    <h1 class="warning">APOCALYPSE V41</h1>
     
-    <div class="stat-grid">
-        <div class="stat-card">
-            <div class="stat-label">Figlie Create</div>
-            <div id="countDaughters" class="stat-val highlight">0</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Generazione Attuale</div>
-            <div id="displayGen" class="stat-val">--</div>
-        </div>
+    <div class="stat-card">
+        <label>CODA ATTACCO (CONTRATTI)</label>
+        <div id="qCount" class="val">0</div>
     </div>
 
-    <div class="stat-card" style="margin-bottom: 15px;">
-        <div class="stat-label">Volume Token Ereditati (Totali)</div>
-        <div id="totalTokens" class="stat-val cyan-val">0.00 MATRI</div>
+    <div class="stat-card">
+        <label>TARGET COLPITI (TOTALI)</label>
+        <div id="tSpam" class="val">0</div>
     </div>
 
-    <div class="stat-grid">
-        <div class="stat-card">
-            <div class="stat-label">Saldo PAS</div>
-            <div id="displayBal" class="stat-val">0.00</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-label">Autonomia</div>
-            <div id="displayAutonomy" class="stat-val" style="font-size: 13px;">-- cicli</div>
-        </div>
-    </div>
-
-    <div class="input-group">
-        <label>Contratto Matrioska (Target)</label>
-        <input type="text" id="targetAddr" placeholder="0x...">
-    </div>
-
-    <div class="input-group">
-        <label>Private Key Master</label>
-        <input type="password" id="pKey" placeholder="0x...">
-    </div>
-
-    <button class="btn-main" onclick="startInfection()">🚀 Avvia Protocollo V39</button>
-    <button class="btn-sub" onclick="loadLastSaved()">📂 Recupera Ultima Memoria</button>
-    <button class="btn-sub" onclick="clearStats()">🧹 Reset Contatori Sessione</button>
+    <input type="text" id="masterAddr" placeholder="GEN 0 ADDRESS" style="width:100%; background: #000; color: #fff; border: 1px solid #444; padding: 10px;">
+    <input type="password" id="pKey" placeholder="MASTER PRIVATE KEY" style="width:100%; background: #000; color: #fff; border: 1px solid #444; padding: 10px; margin-top: 10px;">
     
-    <div style="font-size: 9px; color: #444; margin-top: 15px;">
-        NETWORK: Paseo Asset Hub<br>
-        TOKEN DISTRIBUTION: 30% Spam / 70% Inheritance
+    <button onclick="ignite()">☣️ INIZIA SATURAZIONE</button>
+
+    <div id="status" style="margin-top: 20px; font-size: 10px;">
+        MODE: TOTAL SATURATION<br>
+        SPREAD: BINARY RECURSIVE<br>
+        LOAD: 50 TX/GEN
     </div>
 </div>
 
-<div class="main-view">
-    <div class="log-header">
-        <span>STATUS: <span id="statusTxt" style="color: #ff9900;">IN ATTESA</span></span>
-        <span id="lastTx">--</span>
-    </div>
-    <div id="log">
-        <div class="log-entry">Terminale pronto. Inserire indirizzo V39 per iniziare il tracciamento dei token reali.</div>
-    </div>
-</div>
+<div id="log">> STANDBY... AGGRESSIVE PROTOCOL LOADED.</div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
-    const ABI = [
-        "function spawn(address[] t) external", 
-        "function gen() view returns (uint256)", 
-        "event NewGen(address indexed daughter, uint256 g)",
-        "event Transfer(address indexed from, address indexed to, uint256 value)"
-    ];
+    const ABI = ["function spawn(address[] t) external", "function gen() view returns (uint256)", "event NewGen(address indexed daughter, uint256 g)"];
     
+    let queue = [];
+    let totalSpam = 0;
     let isRunning = false;
-    let daughterCount = 0;
-    let totalInherited = 0;
 
-    function log(msg, type = "") {
+    function log(m, cls="") {
         const l = document.getElementById('log');
-        const div = document.createElement('div');
-        div.className = 'log-entry ' + (type === 'success' ? 'log-success' : '');
-        div.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
-        l.insertBefore(div, l.firstChild);
+        l.innerHTML = `<div class="${cls}">[${new Date().toLocaleTimeString()}] ${m}</div>` + l.innerHTML;
     }
 
-    function loadLastSaved() {
-        const saved = localStorage.getItem('last_matrioska_v39');
-        if (saved) {
-            document.getElementById('targetAddr').value = saved;
-            log("Indirizzo V39 caricato dalla cache.", "success");
-        }
-    }
-
-    function clearStats() {
-        daughterCount = 0;
-        totalInherited = 0;
-        updateUI();
-        log("Contatori resettati.");
-    }
-
-    function updateUI() {
-        document.getElementById('countDaughters').innerText = daughterCount;
-        document.getElementById('totalTokens').innerText = totalInherited.toLocaleString(undefined, {minimumFractionDigits: 2}) + " MATRI";
-    }
-
-    async function startInfection() {
+    async function ignite() {
         if(isRunning) return;
-        const addr = document.getElementById('targetAddr').value.trim();
-        const pkey = document.getElementById('pKey').value.trim();
-        if(!addr || !pkey) return log("ERRORE: Dati mancanti.", "err");
-
-        document.getElementById('statusTxt').innerText = "LIVE";
-        document.getElementById('statusTxt').style.color = "#00ff41";
+        const addr = document.getElementById('masterAddr').value.trim();
+        if(!addr) return;
+        queue.push(addr);
         isRunning = true;
-        runLoop(addr, pkey);
+        log("☣️ PROTOCOLLO APOCALYPSE ATTIVATO. SATURAZIONE IN CORSO.", "warning");
+        process();
     }
 
-    async function runLoop(addr, pkey) {
-        if(!isRunning) return;
+    async function process() {
+        if(queue.length === 0) { isRunning = false; return; }
+        
+        const current = queue.shift();
+        document.getElementById('qCount').innerText = queue.length;
+
+        const provider = new ethers.JsonRpcProvider(RPC);
+        const wallet = new ethers.Wallet(document.getElementById('pKey').value.trim(), provider);
+        const contract = new ethers.Contract(current, ABI, wallet);
 
         try {
-            const provider = new ethers.JsonRpcProvider(RPC);
-            const wallet = new ethers.Wallet(pkey, provider);
-            const contract = new ethers.Contract(addr, ABI, wallet);
-
-            // 1. Update Saldo PAS
-            const bal = await provider.getBalance(wallet.address);
-            const ethBal = parseFloat(ethers.formatEther(bal));
-            document.getElementById('displayBal').innerText = ethBal.toFixed(4);
-
-            // 2. Info Contratto
-            const gen = await contract.gen();
-            document.getElementById('displayGen').innerText = gen;
-
-            log(`Esecuzione Generazione ${gen}...`);
-            const targets = Array.from({length: 10}, () => ethers.Wallet.createRandom().address);
-
-            // 3. Esecuzione (Token reali on-chain)
-            const tx = await contract.spawn(targets, { gasLimit: 9000000 });
-            document.getElementById('lastTx').innerText = "Last TX: " + tx.hash.substring(0,16) + "...";
+            // Genera 50 target per ogni singola transazione
+            const targets = Array.from({length: 50}, () => ethers.Wallet.createRandom().address);
             
+            log(`COLPENDO: ${current} con 50 target...`);
+            // Gas limit molto alto per gestire i 50 eventi + 2 deploy
+            const tx = await contract.spawn(targets, { gasLimit: 15000000 });
             const receipt = await tx.wait();
             
-            // 4. Analisi Log per Token
-            const transferTopic = ethers.id("Transfer(address,address,uint256)");
+            totalSpam += 50;
+            document.getElementById('tSpam').innerText = totalSpam;
+
             const newGenTopic = ethers.id("NewGen(address,uint256)");
-            
-            let daughterAddr = "";
-            
             receipt.logs.forEach(l => {
-                if (l.topics[0] === newGenTopic) {
-                    daughterAddr = ethers.getAddress("0x" + l.topics[1].slice(26));
+                if(l.topics[0] === newGenTopic) {
+                    const d = ethers.getAddress("0x" + l.topics[1].slice(26));
+                    queue.push(d);
+                    log(`☢️ NUOVA SORGENTE GENERATA: ${d}`);
                 }
             });
 
-            // Calcolo eredità alla figlia (il log di trasferimento verso la figlia)
-            receipt.logs.forEach(l => {
-                if (l.topics[0] === transferTopic) {
-                    const to = ethers.getAddress("0x" + l.topics[2].slice(26));
-                    if (to === daughterAddr) {
-                        const val = Number(ethers.formatEther(l.data));
-                        totalInherited += val;
-                    }
-                }
-            });
-
-            daughterCount++;
-            updateUI();
-
-            log(`GENERATA FIGLIA ${gen}: ${daughterAddr}`, "success");
-            log(`TOKEN TRASFERITI ALLA FIGLIA: 700.000 (70%)`, "success");
-
-            // Salvataggio
-            localStorage.setItem('last_matrioska_v39', daughterAddr);
-            document.getElementById('targetAddr').value = daughterAddr;
-
-            setTimeout(() => runLoop(daughterAddr, pkey), 4000);
+            document.getElementById('qCount').innerText = queue.length;
+            setTimeout(process, 1000); // Delay minimo, quasi istantaneo
 
         } catch (e) {
-            log("STOP: " + e.message, "err");
-            isRunning = false;
-            document.getElementById('statusTxt').innerText = "OFFLINE";
-            document.getElementById('statusTxt').style.color = "#ff0055";
+            log(`SALTO CONTRATTO: ${e.message}`, "gray");
+            setTimeout(process, 500);
         }
     }
 </script>
