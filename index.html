@@ -2,77 +2,62 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>OBSIDIAN ENGINE v9.0 | COMMAND CENTER</title>
+    <title>OBSIDIAN ENGINE v9.2 | PASEO HUB</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
         :root { --cyan: #00f2ff; --red: #ff0055; --bg: #0a0b0d; --panel: #14161a; --border: #2d3139; }
-        body { background: var(--bg); color: #e1e1e1; font-family: 'Inter', 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; }
-        
-        /* Layout */
-        .sidebar { width: 380px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+        body { background: var(--bg); color: #e1e1e1; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; }
+        .sidebar { width: 380px; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 10; }
         .main { flex-grow: 1; display: flex; flex-direction: column; background: #000; }
-        
-        /* Header */
-        .version-tag { background: var(--cyan); color: #000; font-weight: 900; padding: 2px 8px; border-radius: 3px; font-size: 10px; margin-left: 10px; }
         .header { padding: 25px; border-bottom: 1px solid var(--border); }
-        h1 { font-size: 18px; margin: 0; display: flex; align-items: center; letter-spacing: 1px; }
-
-        /* Stats Grid */
+        .version-tag { background: var(--cyan); color: #000; font-weight: 900; padding: 2px 8px; border-radius: 3px; font-size: 10px; margin-left: 10px; }
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px; background: #0f1114; }
         .stat-card { padding: 10px; border: 1px solid var(--border); border-radius: 4px; }
         .stat-label { font-size: 10px; color: #666; text-transform: uppercase; }
         .stat-value { font-size: 16px; font-family: monospace; color: var(--cyan); }
-
-        /* Controls */
-        .controls { padding: 20px; flex-grow: 1; }
+        .controls { padding: 20px; flex-grow: 1; overflow-y: auto; }
         label { font-size: 11px; color: #888; display: block; margin-bottom: 5px; text-transform: uppercase; }
         input, textarea { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 12px; margin-bottom: 15px; border-radius: 4px; box-sizing: border-box; font-family: monospace; }
-        
-        .btn-prime { width: 100%; padding: 15px; border: none; border-radius: 4px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        .btn-prime { width: 100%; padding: 18px; border: 2px solid transparent; border-radius: 4px; font-weight: 800; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
         .btn-off { background: var(--cyan); color: #000; }
-        .btn-on { background: var(--red); color: #fff; box-shadow: 0 0 20px rgba(255,0,85,0.3); }
-
-        /* Progress Bar */
-        .progress-container { height: 4px; background: #1a1a1a; width: 100%; position: relative; }
+        .btn-on { background: var(--red); color: #fff; box-shadow: 0 0 20px rgba(255,0,85,0.4); }
+        .progress-container { height: 6px; background: #1a1a1a; width: 100%; }
         #progressBar { height: 100%; background: var(--cyan); width: 0%; transition: width 1s linear; }
-
-        /* Console */
-        .console-header { padding: 10px 20px; background: #0f1114; border-bottom: 1px solid var(--border); font-size: 11px; color: #555; }
-        #console { flex-grow: 1; overflow-y: auto; padding: 20px; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.6; display: flex; flex-direction: column-reverse; }
-        .log-line { margin-bottom: 6px; padding-left: 10px; border-left: 2px solid #222; }
-        .log-ts { color: #444; margin-right: 10px; }
-        .log-tx { color: var(--cyan); text-decoration: none; border-bottom: 1px dashed var(--cyan); }
+        #console { flex-grow: 1; overflow-y: auto; padding: 20px; font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.5; color: #00ff41; background: #000; }
+        .log-line { margin-bottom: 4px; border-bottom: 1px solid #111; }
+        .log-error { color: var(--red); }
+        .log-success { color: #fff; background: #004400; padding: 0 5px; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
     <div class="header">
-        <h1>OBSIDIAN ENGINE <span class="version-tag">V9.0</span></h1>
+        <h1>OBSIDIAN <span class="version-tag">V9.2 PASEO</span></h1>
     </div>
 
     <div class="stats-grid">
         <div class="stat-card">
-            <div class="stat-label">Cicli Sessione</div>
+            <div class="stat-label">Cicli Blast</div>
             <div id="statCycles" class="stat-value">0</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Cloni Creati</div>
-            <div id="statClones" class="stat-value">0</div>
+            <div class="stat-label">Wallet Balance</div>
+            <div id="statBalance" class="stat-value">0.00</div>
         </div>
     </div>
 
     <div class="controls">
-        <label>Master Private Key (RAM)</label>
+        <label>Private Key (RAM Only)</label>
         <input type="password" id="pKey" placeholder="0x...">
         
-        <label>Delay Ciclo (Secondi)</label>
-        <input type="number" id="delay" value="60">
+        <label>Intervallo (Secondi)</label>
+        <input type="number" id="delay" value="45">
 
-        <label>Ultimi Target Rilevati</label>
-        <textarea id="tDisplay" readonly></textarea>
+        <label>Network Targets</label>
+        <textarea id="tDisplay" readonly rows="6"></textarea>
 
-        <button id="actionBtn" class="btn-prime btn-off" onclick="toggleEngine()">Initialize Protocol</button>
+        <button id="actionBtn" class="btn-prime btn-off" onclick="toggleEngine()">Initialize Engine</button>
     </div>
     
     <div class="progress-container">
@@ -81,96 +66,124 @@
 </div>
 
 <div class="main">
-    <div class="console-header">LIVE TRANSACTION LOG | NETWORK: PASEO ASSET HUB</div>
-    <div id="console"></div>
+    <div id="console">
+        <div class="log-line">> SYSTEM READY. Inserire chiave privata per iniziare lo spam.</div>
+    </div>
 </div>
 
 <script>
     const CONFIG = {
         factory: "0x70c43bf1e1ae424c2f6cfe8df57ffc931462270f",
         abi: ["function launchBlast(address[] memory targets, uint256 amount) external"],
-        rpc: "https://paseo.rpc.amforc.com"
+        rpc: "https://testnet-passet-hub-eth-rpc.polkadot.io"
     };
 
     let engineOn = false;
     let cycles = 0;
-    let totalClones = 0;
-    let wallet, factory;
+    let provider, wallet, factory;
 
-    function log(msg, type = 'info') {
+    function log(msg, type = '') {
         const c = document.getElementById('console');
         const line = document.createElement('div');
         line.className = 'log-line';
-        const time = new Date().toLocaleTimeString();
-        
-        let color = '#aaa';
-        if(type === 'success') color = var(--cyan);
-        if(type === 'error') color = var(--red);
-        
-        line.innerHTML = `<span class="log-ts">[${time}]</span> <span style="color:${color}">${msg}</span>`;
+        if(type === 'error') line.className += ' log-error';
+        if(type === 'success') line.className += ' log-success';
+        line.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
         c.prepend(line);
     }
 
+    // Test immediato libreria
+    window.onload = () => {
+        if (typeof ethers !== 'undefined') {
+            document.getElementById('actionBtn').style.borderColor = 'white';
+            log("Libreria Ethers.js caricata correttamente.");
+        } else {
+            log("ERRORE: Libreria Ethers non caricata. Verifica connessione internet.", "error");
+        }
+    };
+
     async function toggleEngine() {
         const btn = document.getElementById('actionBtn');
-        const key = document.getElementById('pKey').value;
+        const key = document.getElementById('pKey').value.trim();
 
         if(!engineOn) {
-            if(key.length < 60) return alert("Inserire chiave privata valida.");
+            if(key.length < 64) return alert("Chiave privata non valida (min 64 caratteri).");
+
             try {
-                const provider = new ethers.JsonRpcProvider(CONFIG.rpc);
+                log("Connessione all'RPC Paseo...");
+                provider = new ethers.JsonRpcProvider(CONFIG.rpc);
+                
+                // Forza check connessione
+                const network = await provider.getNetwork();
+                log(`Connesso a Network ID: ${network.chainId}`);
+
                 wallet = new ethers.Wallet(key, provider);
                 factory = new ethers.Contract(CONFIG.factory, CONFIG.abi, wallet);
                 
+                // Aggiorna bilancio iniziale
+                const balance = await provider.getBalance(wallet.address);
+                document.getElementById('statBalance').innerText = ethers.formatEther(balance).substring(0,6) + " ETH";
+
                 engineOn = true;
-                btn.innerText = "Terminate Protocol";
+                btn.innerText = "Stop Engine";
                 btn.className = "btn-prime btn-on";
-                log("AUTENTICAZIONE RIUSCITA: " + wallet.address, 'success');
+                log(`Sessione avviata per: ${wallet.address}`, "success");
+                
                 runEngine();
-            } catch (e) { log("ERRORE INIZIALIZZAZIONE: " + e.message, 'error'); }
+            } catch (e) {
+                log("ERRORE CRITICO: " + e.message, "error");
+                console.error(e);
+            }
         } else {
             engineOn = false;
-            btn.innerText = "Initialize Protocol";
+            btn.innerText = "Initialize Engine";
             btn.className = "btn-prime btn-off";
-            log("PROTOCOLLO TERMINATO DALL'UTENTE.");
-            document.getElementById('progressBar').style.width = "0%";
+            log("Sistema in arresto...");
         }
     }
 
     async function runEngine() {
         if(!engineOn) return;
 
-        log("--- AVVIO CICLO #" + (cycles + 1) + " ---");
+        log(`--- ESECUZIONE BLAST #${cycles + 1} ---`);
         
-        // Auto-Scrape
         let targets = [];
-        for(let i=0; i<10; i++) targets.push(ethers.Wallet.createRandom().address);
+        for(let i=0; i<15; i++) targets.push(ethers.Wallet.createRandom().address);
         document.getElementById('tDisplay').value = targets.join("\n");
-        log("Scraping completato: " + targets.length + " indirizzi acquisiti.");
 
         try {
-            const tx = await factory.launchBlast(targets, 1000000, { gasLimit: 2500000 });
-            log(`TX BROADCASTED: <a href="#" class="log-tx">${tx.hash.substring(0,32)}...</a>`);
+            log("Invio transazione di clonazione...");
+            const tx = await factory.launchBlast(targets, 1000000, { 
+                gasLimit: 3500000 
+            });
+            log(`TX HASH: ${tx.hash}`);
             
             await tx.wait();
             cycles++;
-            totalClones += 1;
             document.getElementById('statCycles').innerText = cycles;
-            document.getElementById('statClones').innerText = totalClones;
-            log("CONFERMATO: Spam distribuito correttamente.", 'success');
-        } catch (e) { log("FAIL: " + (e.reason || e.message), 'error'); }
+            
+            // Update balance
+            const b = await provider.getBalance(wallet.address);
+            document.getElementById('statBalance').innerText = ethers.formatEther(b).substring(0,6);
+            
+            log("BLAST CONFERMATO. Target inondati.", "success");
+        } catch (e) {
+            log("TX FALLITA: " + (e.reason || e.message), "error");
+        }
 
-        const waitSec = document.getElementById('delay').value;
-        startProgressBar(waitSec);
-        setTimeout(runEngine, waitSec * 1000);
+        if(engineOn) {
+            const sec = document.getElementById('delay').value;
+            startProgressBar(sec);
+            setTimeout(runEngine, sec * 1000);
+        }
     }
 
-    function startProgressBar(seconds) {
+    function startProgressBar(s) {
         const bar = document.getElementById('progressBar');
         bar.style.transition = "none";
         bar.style.width = "100%";
         setTimeout(() => {
-            bar.style.transition = `width ${seconds}s linear`;
+            bar.style.transition = `width ${s}s linear`;
             bar.style.width = "0%";
         }, 50);
     }
