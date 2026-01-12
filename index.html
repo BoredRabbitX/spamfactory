@@ -2,102 +2,137 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>VIPER V37 | BYPASS DEPLOY</title>
+    <title>VIPER V38 | INTELLIGENT TRACKER</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --neon: #00ff41; --bg: #050505; }
-        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        .header { border-bottom: 1px solid #333; padding: 10px 20px; display: flex; justify-content: space-between; background: #111; }
-        .main-container { display: grid; grid-template-columns: 350px 1fr; flex-grow: 1; overflow: hidden; }
-        .sidebar { padding: 20px; border-right: 1px solid #333; display: flex; flex-direction: column; gap: 15px; }
-        #log { background: #000; padding: 20px; overflow-y: auto; font-size: 11px; }
-        .stat-box { border: 1px solid var(--neon); padding: 10px; margin-bottom: 5px; }
-        input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 10px; box-sizing: border-box; }
-        button { background: var(--neon); color: #000; padding: 15px; border: none; font-weight: bold; cursor: pointer; width: 100%; }
-        .success { color: #fff; background: #005500; }
+        :root { --neon: #00ff41; --bg: #050505; --danger: #ff0055; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
+        .sidebar { background: #111; border-right: 1px solid #333; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .stat-card { background: #000; border: 1px solid #222; padding: 12px; border-radius: 4px; position: relative; overflow: hidden; }
+        .stat-card.active { border-color: var(--neon); box-shadow: 0 0 10px rgba(0,255,65,0.2); }
+        .label { font-size: 9px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+        .val { font-size: 19px; font-weight: bold; margin-top: 5px; }
+        #log { background: #000; padding: 20px; overflow-y: auto; font-size: 11px; color: #adbac7; line-height: 1.5; }
+        input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 4px; box-sizing: border-box; font-size: 12px; }
+        button { background: var(--neon); color: #000; padding: 20px; border: none; font-weight: 900; cursor: pointer; border-radius: 4px; text-transform: uppercase; margin-top: 10px; }
+        .err-msg { color: var(--danger); font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <span>SYSTEM: VIPER PREDATOR V37</span>
-    <span id="status">STATUS: STANDBY</span>
-</div>
-
-<div class="main-container">
-    <div class="sidebar">
-        <div class="stat-box">
-            <div style="font-size: 10px; color: #666;">AUTONOMIA PAS</div>
-            <div id="displayCycles" style="font-size: 20px;">---</div>
-        </div>
-        
-        <label style="font-size: 10px;">TARGET MATRIOSKA</label>
-        <input type="text" id="target" placeholder="0x...">
-        
-        <label style="font-size: 10px;">PRIVATE KEY</label>
-        <input type="password" id="key" placeholder="0x...">
-
-        <button onclick="ignite()">LANCIA RICORSIONE</button>
-        
-        <div id="telemetry" style="font-size: 10px; color: #555; margin-top: auto;">
-            RPC: Paseo Asset Hub<br>
-            Gas Limit: 8,000,000
-        </div>
+<div class="sidebar">
+    <h2 style="margin:0; font-size: 18px;">VIPER v38 <span style="font-size: 10px; color: #444;">PRO</span></h2>
+    
+    <div class="stat-card active">
+        <div class="label">Balance Residuo</div>
+        <div id="displayBal" class="val">0.0000 PAS</div>
     </div>
 
-    <div id="log">> Inizializzazione completata. Pronto al lancio.</div>
+    <div class="stat-card">
+        <div class="label">Burn Rate (Gas/TX)</div>
+        <div id="displayGas" class="val">0</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="label">Stima Autonomia</div>
+        <div id="displayAutonomy" class="val" style="color: #00f2ff;">---</div>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #222; margin: 10px 0;">
+
+    <label class="label">Target Matrioska Address</label>
+    <input type="text" id="target" placeholder="Incolla l'indirizzo del contratto Matrioska">
+    
+    <label class="label">Private Key (Master)</label>
+    <input type="password" id="key" placeholder="0x...">
+
+    <button onclick="ignite()">🔥 Start Intelligent Loop</button>
+    
+    <div id="status" style="font-size: 10px; margin-top: auto; color: #444;">Network: Paseo Asset Hub</div>
 </div>
+
+<div id="log">> System initialized. Ready for deployment analysis.</div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
-    const ABI = ["function spawn(address[] t) external", "function gen() view returns (uint256)", "event NewGen(address indexed daughter, uint256 g)"];
+    const ABI = [
+        "function spawn(address[] t) external", 
+        "function gen() view returns (uint256)", 
+        "event NewGen(address indexed daughter, uint256 g)"
+    ];
     let running = false;
 
-    function out(m, cls="") {
+    function out(m, color="") {
         const l = document.getElementById('log');
-        l.innerHTML = `<div class="${cls}">[${new Date().toLocaleTimeString()}] ${m}</div>` + l.innerHTML;
+        l.innerHTML = `<div>[${new Date().toLocaleTimeString()}] <span style="color:${color}">${m}</span></div>` + l.innerHTML;
     }
 
     async function ignite() {
         if(running) return;
-        running = true;
-        document.getElementById('status').innerText = "STATUS: ACTIVE";
+        const addr = document.getElementById('target').value.trim();
+        const pkey = document.getElementById('key').value.trim();
+        
         const provider = new ethers.JsonRpcProvider(RPC);
-        const wallet = new ethers.Wallet(document.getElementById('key').value.trim(), provider);
+        const wallet = new ethers.Wallet(pkey, provider);
+        
+        try {
+            out("Verifica integrità contratto...");
+            const code = await provider.getCode(addr);
+            if(code === "0x") throw new Error("L'indirizzo fornito non contiene codice!");
 
-        async function loop(addr) {
+            const contract = new ethers.Contract(addr, ABI, wallet);
+            
+            // VALIDATORE AUTOMATICO: Se non ha la funzione gen(), è l'indirizzo sbagliato (Factory)
             try {
-                const bal = await provider.getBalance(wallet.address);
-                const ethBal = parseFloat(ethers.formatEther(bal));
-                
-                const contract = new ethers.Contract(addr, ABI, wallet);
-                const g = await contract.gen();
-                
-                out(`Gen ${g} individuata. Lancio attacco...`);
-                
-                const targets = Array.from({length: 5}, () => ethers.Wallet.createRandom().address);
-                const tx = await contract.spawn(targets, { gasLimit: 8000000 });
-                
-                out(`TX: ${tx.hash.substring(0,30)}...`);
-                const receipt = await tx.wait();
-                
-                const cost = parseFloat(ethers.formatEther(receipt.gasUsed * receipt.gasPrice));
-                document.getElementById('displayCycles').innerText = Math.floor(ethBal / (cost || 0.01)) + " cicli";
-
-                const event = receipt.logs.find(l => l.topics[0] === ethers.id("NewGen(address,uint256)"));
-                const daughter = ethers.getAddress("0x" + event.topics[1].slice(26));
-                
-                out(`FIGLIA NATA: ${daughter}`, "success");
-                document.getElementById('target').value = daughter;
-                
-                setTimeout(() => loop(daughter), 5000);
-            } catch (e) {
-                out("ERRORE: " + e.message, "red");
-                running = false;
-                document.getElementById('status').innerText = "STATUS: FAILED";
+                await contract.gen();
+            } catch(e) {
+                throw new Error("ERRORE: Hai incollato la Factory! Incolla l'indirizzo di Matrioska.");
             }
+
+            running = true;
+            loop(addr, wallet, provider);
+        } catch(e) {
+            out(e.message, "#ff0055");
         }
-        loop(document.getElementById('target').value.trim());
+    }
+
+    async function loop(addr, wallet, provider) {
+        if(!running) return;
+
+        try {
+            const bal = await provider.getBalance(wallet.address);
+            const ethBal = parseFloat(ethers.formatEther(bal));
+            document.getElementById('displayBal').innerText = ethBal.toFixed(4) + " PAS";
+
+            const contract = new ethers.Contract(addr, ABI, wallet);
+            const currentGen = await contract.gen();
+            
+            out(`Attivazione Generazione ${currentGen}...`);
+            const targets = Array.from({length: 10}, () => ethers.Wallet.createRandom().address);
+
+            const tx = await contract.spawn(targets, { gasLimit: 8000000 });
+            out(`TX Broadcast: ${tx.hash.substring(0,30)}...`, "#00f2ff");
+            
+            const receipt = await tx.wait();
+            
+            // Calcolo Telemetria Burn Rate
+            const gasUsed = Number(receipt.gasUsed);
+            const cost = parseFloat(ethers.formatEther(receipt.gasUsed * receipt.gasPrice));
+            document.getElementById('displayGas').innerText = gasUsed.toLocaleString();
+            document.getElementById('displayAutonomy').innerText = Math.floor(ethBal / cost) + " cicli";
+
+            const event = receipt.logs.find(l => l.topics[0] === ethers.id("NewGen(address,uint256)"));
+            const daughter = ethers.getAddress("0x" + event.topics[1].slice(26));
+
+            out(`SUCCESS: Figlia nata a ${daughter}`, "#fff");
+            document.getElementById('target').value = daughter;
+            
+            setTimeout(() => loop(daughter, wallet, provider), 5000);
+
+        } catch (e) {
+            out("FALLIMENTO CICLO: " + e.message, "#ff0055");
+            running = false;
+        }
     }
 </script>
 </body>
