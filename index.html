@@ -2,32 +2,33 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>OBSIDIAN v14 | MANUAL SELECTOR</title>
+    <title>OBSIDIAN v15 | GHOST MODE</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --cyan: #00f2ff; --bg: #050505; }
-        body { background: var(--bg); color: #fff; font-family: 'Courier New', monospace; padding: 20px; }
-        .console { background: #000; border: 1px solid #333; height: 400px; overflow-y: auto; padding: 15px; font-size: 11px; color: var(--cyan); }
-        input { width: 100%; background: #111; border: 1px solid var(--cyan); color: #fff; padding: 10px; margin: 10px 0; }
-        button { width: 100%; padding: 20px; background: var(--cyan); color: #000; font-weight: bold; cursor: pointer; border: none; }
+        body { background: #000; color: #00ff00; font-family: monospace; padding: 20px; }
+        .box { border: 1px solid #00ff00; padding: 15px; background: #050505; }
+        input { width: 100%; background: #000; border: 1px solid #00ff00; color: #00ff00; padding: 10px; margin: 10px 0; }
+        button { width: 100%; padding: 20px; background: #00ff00; color: #000; font-weight: bold; cursor: pointer; border: none; }
+        #log { margin-top: 20px; font-size: 10px; height: 300px; overflow-y: auto; border: 1px solid #333; padding: 10px; }
     </style>
 </head>
 <body>
-
-    <h2>MATRIOSKA v14 - MANUAL SELECTOR</h2>
-    <input type="text" id="fAddr" value="0x21d2272c5BCEFD868E6a357695FAC1Ec9336430f">
-    <input type="password" id="pKey" placeholder="Private Key">
-    <button onclick="ignite()">☢️ MANUAL DATA INJECTION</button>
-    <div id="console" class="console"></div>
+    <div class="box">
+        <h2>MATRIOSKA v15 - GHOST MODE</h2>
+        <input type="text" id="fAddr" value="0x21d2272c5BCEFD868E6a357695FAC1Ec9336430f">
+        <input type="password" id="pKey" placeholder="CHIAVE PRIVATA">
+        <button onclick="ghostBlast()">⚡ LANCIO FORZATO (RAW DATA)</button>
+        <div id="log"></div>
+    </div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
 
     function log(msg) {
-        document.getElementById('console').innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>` + document.getElementById('console').innerHTML;
+        document.getElementById('log').innerHTML = `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>` + document.getElementById('log').innerHTML;
     }
 
-    async function ignite() {
+    async function ghostBlast() {
         const addr = document.getElementById('fAddr').value.trim();
         const key = document.getElementById('pKey').value.trim();
         
@@ -35,38 +36,38 @@
             const provider = new ethers.JsonRpcProvider(RPC);
             const wallet = new ethers.Wallet(key, provider);
 
-            // 1. Definiamo i parametri
-            const targets = [
-                "0x0000000000000000000000000000000000000001",
-                "0x0000000000000000000000000000000000000002"
-            ];
-            const amount = 1000000;
+            log("Costruzione manuale del Calldata...");
 
-            // 2. Usiamo un'interfaccia PULITA per generare il data
-            // Usiamo 'address[]' senza calldata/memory (standard ABI)
-            const iface = new ethers.Interface(["function blast(address[] targets, uint256 amount)"]);
-            const encodedData = iface.encodeFunctionData("blast", [targets, amount]);
-
-            log("VERIFICA SELETTORE: " + encodedData.substring(0, 10));
+            // SELETTORE: blast(address[],uint256)
+            const selector = "0x9188e23b";
             
-            // IL SELETTORE DEVE ESSERE 0x9188e23b
-            if (encodedData.substring(0, 10) !== "0x9188e23b") {
-                log("ATTENZIONE: Selettore errato rilevato! Forzo correzione...");
-            }
+            // PARAMETRI MANUALI (2 target per semplicità)
+            const target1 = "0000000000000000000000000000000000000000000000000000000000000001";
+            const target2 = "0000000000000000000000000000000000000000000000000000000000000002";
+            
+            // ABI Encoding manuale per address[] + uint256
+            // Offset per array (64), Valore amount (1*10^6), Lunghezza array (2), Gli indirizzi
+            const offset = "0000000000000000000000000000000000000000000000000000000000000040";
+            const amount = "00000000000000000000000000000000000000000000000000000000000f4240"; // 1.000.000
+            const length = "0000000000000000000000000000000000000000000000000000000000000002";
+            
+            const rawData = selector + offset + amount + length + target1 + target2;
 
-            log("Invio transazione...");
+            log("PAYLOAD RAW: " + rawData.substring(0, 40) + "...");
+
             const tx = await wallet.sendTransaction({
                 to: addr,
-                data: encodedData,
-                gasLimit: 3000000
+                data: rawData,
+                gasLimit: 3000000,
+                gasPrice: 1000000000000 // 1000 Gwei (Paseo standard)
             });
 
-            log("TX HASH: " + tx.hash);
+            log("INVIATO! Hash: " + tx.hash);
             const receipt = await tx.wait();
-            log(receipt.status === 1 ? "!!! SUCCESS !!!" : "REVERTED AGAIN", receipt.status === 1 ? "cyan" : "red");
+            log(receipt.status === 1 ? "SUCCESS" : "FAIL (REVERT)");
 
         } catch (e) {
-            log("ERROR: " + e.message);
+            log("ERRORE: " + e.message);
         }
     }
 </script>
