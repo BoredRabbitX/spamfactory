@@ -2,109 +2,194 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>VIPER APOCALYPSE V41</title>
+    <title>PHOENIX V42 | GLASS</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --danger: #ff0000; --bg: #000; }
-        body { background: var(--bg); color: var(--danger); font-family: 'Courier New', monospace; margin: 0; display: grid; grid-template-columns: 420px 1fr; height: 100vh; }
-        .sidebar { background: #0a0000; border-right: 2px solid var(--danger); padding: 25px; box-shadow: 10px 0 20px rgba(255,0,0,0.2); }
-        #log { background: #000; padding: 20px; overflow-y: auto; font-size: 10px; color: #ff6666; text-shadow: 0 0 2px #ff0000; }
-        .stat-card { border: 1px solid var(--danger); padding: 15px; margin-bottom: 10px; background: #1a0000; }
-        .val { font-size: 26px; font-weight: 900; color: #fff; }
-        button { background: var(--danger); color: #fff; border: none; padding: 25px; width: 100%; font-weight: bold; cursor: pointer; font-size: 18px; letter-spacing: 3px; }
-        button:hover { background: #ff4444; }
-        .warning { animation: blink 0.5s infinite; color: #fff; font-weight: bold; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
+        :root { --accent: #ff6600; --glass: rgba(255, 255, 255, 0.05); --border: rgba(255, 255, 255, 0.1); }
+        
+        body { 
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); 
+            color: #fff; font-family: 'Inter', system-ui, sans-serif; 
+            margin: 0; display: flex; height: 100vh; justify-content: center; align-items: center;
+        }
+
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            width: 90vw;
+            height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            padding: 30px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h1 { font-size: 18px; font-weight: 300; letter-spacing: 4px; color: var(--accent); margin: 0 0 10px 0; }
+
+        .metric { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid var(--border); }
+        .metric-label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+        .metric-val { font-size: 20px; font-weight: 600; margin-top: 5px; font-family: monospace; }
+
+        input {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            color: #fff;
+            font-size: 12px;
+            width: 100%;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 15px;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 102, 0, 0.4); }
+
+        /* Monitor */
+        .monitor-area { display: flex; flex-direction: column; background: rgba(0,0,0,0.2); }
+        
+        #log {
+            flex-grow: 1;
+            padding: 30px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            line-height: 1.8;
+            color: #aaa;
+        }
+
+        .log-entry { margin-bottom: 10px; border-left: 1px solid var(--accent); padding-left: 15px; }
+        .burn { color: var(--accent); font-weight: bold; }
+        .success { color: #00ff41; }
+
+        .db-status { font-size: 10px; color: #555; padding: 20px; border-top: 1px solid var(--border); }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
-    <h1 class="warning">APOCALYPSE V41</h1>
-    
-    <div class="stat-card">
-        <label>CODA ATTACCO (CONTRATTI)</label>
-        <div id="qCount" class="val">0</div>
+<div class="glass-panel">
+    <div class="sidebar">
+        <h1>PHOENIX 42</h1>
+        
+        <div class="metric">
+            <div class="metric-label">Total Burned</div>
+            <div id="totalBurn" class="metric-val">0</div>
+        </div>
+
+        <div class="metric">
+            <div class="metric-label">Hive Database</div>
+            <div id="hiveCount" class="metric-val">0</div>
+        </div>
+
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px;">
+            <input type="text" id="masterAddr" placeholder="Gen 0 Address">
+            <input type="password" id="pKey" placeholder="Private Key">
+            <button onclick="igniteHive()">Ignite Hive</button>
+            <button onclick="loadHistory()" style="background:transparent; border:1px solid #444; color:#aaa; font-size:10px;">Load History</button>
+        </div>
     </div>
 
-    <div class="stat-card">
-        <label>TARGET COLPITI (TOTALI)</label>
-        <div id="tSpam" class="val">0</div>
-    </div>
-
-    <input type="text" id="masterAddr" placeholder="GEN 0 ADDRESS" style="width:100%; background: #000; color: #fff; border: 1px solid #444; padding: 10px;">
-    <input type="password" id="pKey" placeholder="MASTER PRIVATE KEY" style="width:100%; background: #000; color: #fff; border: 1px solid #444; padding: 10px; margin-top: 10px;">
-    
-    <button onclick="ignite()">☣️ INIZIA SATURAZIONE</button>
-
-    <div id="status" style="margin-top: 20px; font-size: 10px;">
-        MODE: TOTAL SATURATION<br>
-        SPREAD: BINARY RECURSIVE<br>
-        LOAD: 50 TX/GEN
+    <div class="monitor-area">
+        <div id="log">> System Ready. Awaiting Genesis...</div>
+        <div class="db-status">
+            <span>NETWORK: PASEO ASSET HUB</span> | 
+            <span>BATCH MODE: ACTIVE</span> | 
+            <span id="activeAddr">IDLE</span>
+        </div>
     </div>
 </div>
 
-<div id="log">> STANDBY... AGGRESSIVE PROTOCOL LOADED.</div>
-
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
-    const ABI = ["function spawn(address[] t) external", "function gen() view returns (uint256)", "event NewGen(address indexed daughter, uint256 g)"];
+    const ABI = ["function incinerate(address[] t) external", "event NewGen(address indexed daughter, uint256 g)"];
     
-    let queue = [];
-    let totalSpam = 0;
+    let hive = JSON.parse(localStorage.getItem('phoenix_hive') || "[]");
+    let burnedVolume = 0;
     let isRunning = false;
 
     function log(m, cls="") {
         const l = document.getElementById('log');
-        l.innerHTML = `<div class="${cls}">[${new Date().toLocaleTimeString()}] ${m}</div>` + l.innerHTML;
+        const div = document.createElement('div');
+        div.className = 'log-entry ' + cls;
+        div.innerHTML = `[${new Date().toLocaleTimeString()}] ${m}`;
+        l.insertBefore(div, l.firstChild);
     }
 
-    async function ignite() {
+    function loadHistory() {
+        if(hive.length > 0) {
+            document.getElementById('masterAddr').value = hive[hive.length - 1];
+            document.getElementById('hiveCount').innerText = hive.length;
+            log("Database history restored.", "success");
+        }
+    }
+
+    async function igniteHive() {
         if(isRunning) return;
-        const addr = document.getElementById('masterAddr').value.trim();
-        if(!addr) return;
-        queue.push(addr);
+        const start = document.getElementById('masterAddr').value.trim();
+        if(!start) return;
+        if(!hive.includes(start)) hive.push(start);
         isRunning = true;
-        log("☣️ PROTOCOLLO APOCALYPSE ATTIVATO. SATURAZIONE IN CORSO.", "warning");
         process();
     }
 
     async function process() {
-        if(queue.length === 0) { isRunning = false; return; }
-        
-        const current = queue.shift();
-        document.getElementById('qCount').innerText = queue.length;
+        if(!isRunning || hive.length === 0) return;
 
+        const currentAddr = hive[Math.floor(Math.random() * hive.length)];
+        document.getElementById('activeAddr').innerText = `TARGET: ${currentAddr.substring(0,15)}...`;
+        
         const provider = new ethers.JsonRpcProvider(RPC);
         const wallet = new ethers.Wallet(document.getElementById('pKey').value.trim(), provider);
-        const contract = new ethers.Contract(current, ABI, wallet);
+        const contract = new ethers.Contract(currentAddr, ABI, wallet);
 
         try {
-            // Genera 50 target per ogni singola transazione
-            const targets = Array.from({length: 50}, () => ethers.Wallet.createRandom().address);
+            log(`Incinerating tokens on ${currentAddr.substring(0,10)}...`, "burn");
+            const targets = Array.from({length: 15}, () => ethers.Wallet.createRandom().address);
             
-            log(`COLPENDO: ${current} con 50 target...`);
-            // Gas limit molto alto per gestire i 50 eventi + 2 deploy
-            const tx = await contract.spawn(targets, { gasLimit: 15000000 });
+            const tx = await contract.incinerate(targets, { gasLimit: 12000000 });
             const receipt = await tx.wait();
             
-            totalSpam += 50;
-            document.getElementById('tSpam').innerText = totalSpam;
+            burnedVolume += 10000000;
+            document.getElementById('totalBurn').innerText = burnedVolume.toLocaleString() + " TKN";
 
             const newGenTopic = ethers.id("NewGen(address,uint256)");
             receipt.logs.forEach(l => {
                 if(l.topics[0] === newGenTopic) {
                     const d = ethers.getAddress("0x" + l.topics[1].slice(26));
-                    queue.push(d);
-                    log(`☢️ NUOVA SORGENTE GENERATA: ${d}`);
+                    if(!hive.includes(d)) hive.push(d);
                 }
             });
 
-            document.getElementById('qCount').innerText = queue.length;
-            setTimeout(process, 1000); // Delay minimo, quasi istantaneo
-
+            document.getElementById('hiveCount').innerText = hive.length;
+            localStorage.setItem('phoenix_hive', JSON.stringify(hive));
+            
+            setTimeout(process, 1000);
         } catch (e) {
-            log(`SALTO CONTRATTO: ${e.message}`, "gray");
+            log(`Skip: ${currentAddr.substring(0,8)}...`, "gray");
             setTimeout(process, 500);
         }
     }
