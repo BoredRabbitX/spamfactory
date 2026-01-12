@@ -2,74 +2,117 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>VIPER PREDATOR V29</title>
+    <title>VIPER HUNTER V32</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        body { background: #000; color: #ff00ff; font-family: 'Courier New', monospace; padding: 20px; }
-        .monitor { border: 1px solid #ff00ff; height: 60vh; overflow-y: auto; background: #050005; padding: 15px; font-size: 11px; }
-        .stat-bar { background: #1a001a; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; border: 1px solid #330033; }
-        input { background: #000; border: 1px solid #ff00ff; color: #fff; padding: 10px; width: 45%; }
-        button { width: 100%; padding: 20px; background: #ff00ff; color: #000; font-weight: bold; border: none; cursor: pointer; margin-top: 10px; }
-        .token-tx { color: #00ff00; }
+        :root { --neon: #00ff41; --bg: #0a0a0c; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: grid; grid-template-columns: 420px 1fr; height: 100vh; }
+        .sidebar { background: #141417; border-right: 1px solid #222; padding: 25px; display: flex; flex-direction: column; gap: 20px; }
+        #monitor { background: #000; padding: 20px; overflow-y: auto; color: #adbac7; font-size: 11px; }
+        .stat-card { background: #000; border: 1px solid var(--neon); padding: 12px; border-radius: 4px; box-shadow: 0 0 10px rgba(0,255,65,0.1); }
+        .val { font-size: 18px; color: var(--neon); font-weight: bold; }
+        input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; box-sizing: border-box; }
+        button { background: var(--neon); color: #000; padding: 20px; border: none; font-weight: 900; cursor: pointer; text-transform: uppercase; border-radius: 4px; }
+        .highlight { color: #fff; background: #004400; padding: 2px 5px; }
     </style>
 </head>
 <body>
-    <h1>☢️ MATRIOSKA TOKEN ENGINE V29 ☢️</h1>
+
+<div class="sidebar">
+    <h2 style="margin:0;">VIPER HUNTER V32</h2>
     
-    <div class="stat-bar">
-        <span>GEN ATTUALE: <span id="gen">0</span></span>
-        <span>TOKEN DISTRIBUITI: <span id="dist">0</span></span>
+    <div class="stat-card">
+        <div>GENERAZIONE ATTIVA</div>
+        <div id="displayGen" class="val">0</div>
     </div>
 
-    <input type="text" id="target" placeholder="Indirizzo Madre">
-    <input type="password" id="key" placeholder="Private Key">
-    <button onclick="startInfection()">⚡ IGNITION</button>
+    <div class="stat-card">
+        <div>SALDO PAS</div>
+        <div id="valBalance" class="val">0.000</div>
+    </div>
 
-    <div id="monitor" class="monitor"></div>
+    <label>INDIRIZZO CONTRATTO</label>
+    <input type="text" id="targetAddr" placeholder="0x...">
+    
+    <label>CHIAVE PRIVATA MASTER</label>
+    <input type="password" id="pKey" placeholder="0x...">
+
+    <button onclick="ignite()">🚀 AVVIA INSEGUIMENTO AUTOMATICO</button>
+</div>
+
+<div id="monitor">
+    <div>> Sistema pronto. In attesa di input iniziale...</div>
+</div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
-    const ABI = ["function spawnNext(address[] targets) external", "function generation() view returns (uint256)"];
+    const ABI = [
+        "function spawnNext(address[] targets) external",
+        "function generation() view returns (uint256)",
+        "event NewGeneration(address indexed daughter, uint256 gen)"
+    ];
 
-    async function startInfection() {
-        const addr = document.getElementById('target').value.trim();
-        const pkey = document.getElementById('key').value.trim();
-        const mon = document.getElementById('monitor');
+    let active = false;
+
+    function log(msg, type = "") {
+        const m = document.getElementById('monitor');
+        const color = type === "success" ? "#00ff41" : (type === "err" ? "#ff0055" : "#adbac7");
+        m.innerHTML = `<div>[${new Date().toLocaleTimeString()}] <span style="color:${color}">${msg}</span></div>` + m.innerHTML;
+    }
+
+    async function ignite() {
+        if(active) return;
+        active = true;
+        loop();
+    }
+
+    async function loop() {
+        if(!active) return;
+        const addr = document.getElementById('targetAddr').value.trim();
+        const key = document.getElementById('pKey').value.trim();
 
         try {
             const provider = new ethers.JsonRpcProvider(RPC);
-            const wallet = new ethers.Wallet(pkey, provider);
+            const wallet = new ethers.Wallet(key, provider);
             const contract = new ethers.Contract(addr, ABI, wallet);
 
-            const gen = await contract.generation();
-            document.getElementById('gen').innerText = gen;
+            // Update Balance
+            const bal = await provider.getBalance(wallet.address);
+            document.getElementById('valBalance').innerText = parseFloat(ethers.formatEther(bal)).toFixed(3);
 
-            // Genera 10 indirizzi casuali per lo spam/airdrop
-            const targets = Array.from({length: 10}, () => ethers.Wallet.createRandom().address);
-            
-            mon.innerHTML = `<div>[${new Date().toLocaleTimeString()}] Lancio Gen ${gen}... Distribuzione token a 10 target casuali...</div>` + mon.innerHTML;
+            // Update Gen
+            const currentGen = await contract.generation();
+            document.getElementById('displayGen').innerText = currentGen;
 
-            const tx = await contract.spawnNext(targets, { gasLimit: 8000000 });
-            mon.innerHTML = `<div class="token-tx">TX INVIATA: ${tx.hash}</div>` + mon.innerHTML;
+            // Generate Targets
+            const randomTargets = Array.from({length: 5}, () => ethers.Wallet.createRandom().address);
+
+            log(`ATTIVAZIONE GEN ${currentGen} su ${addr.substring(0,12)}...`);
             
+            const tx = await contract.spawnNext(randomTargets, { gasLimit: 5000000 });
+            log(`TX Broadcast: ${tx.hash.substring(0,25)}...`);
+
             const receipt = await tx.wait();
-            
-            // Trova la nuova figlia nei log
-            const birthTopic = ethers.id("NewGeneration(address,uint256)");
-            const logBirth = receipt.logs.find(l => l.topics[0] === birthTopic);
-            
-            if(logBirth) {
-                const daughter = ethers.getAddress("0x" + logBirth.topics[1].slice(26));
-                mon.innerHTML = `<div style="color:white">SUCCESS: Figlia Gen ${Number(gen)+1} nata a ${daughter}</div>` + mon.innerHTML;
-                document.getElementById('target').value = daughter;
+            log(`Confermata! Gas usato: ${receipt.gasUsed}`, "success");
+
+            // SEARCH FOR THE DAUGHTER IN LOGS (The Hunter logic)
+            const topic = ethers.id("NewGeneration(address,uint256)");
+            const birthLog = receipt.logs.find(l => l.topics[0] === topic);
+
+            if(birthLog) {
+                const daughterAddr = ethers.getAddress("0x" + birthLog.topics[1].slice(26));
+                log(`NUOVA FIGLIA RILEVATA: ${daughterAddr}`, "success");
                 
-                // Aggiorna contatore e ricomincia
-                document.getElementById('dist').innerText = (Number(document.getElementById('dist').innerText) + 10);
-                setTimeout(startInfection, 5000);
+                // IL SALTO: Cambiamo l'indirizzo nel campo di testo e nel monitor
+                document.getElementById('targetAddr').value = daughterAddr;
+                
+                log(`Spostamento su Gen ${Number(currentGen)+1} tra 5 secondi...`);
+                setTimeout(loop, 5000);
             }
 
         } catch (e) {
-            mon.innerHTML = `<div style="color:red">ERROR: ${e.message}</div>` + mon.innerHTML;
+            log(`ERRORE: ${e.message}`, "err");
+            active = false;
         }
     }
 </script>
