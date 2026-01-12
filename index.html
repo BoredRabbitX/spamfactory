@@ -2,99 +2,100 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>VIPER V36 | TELEMETRY</title>
+    <title>VIPER V37 | BYPASS DEPLOY</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
         :root { --neon: #00ff41; --bg: #050505; }
-        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: grid; grid-template-columns: 350px 1fr; height: 100vh; }
-        .sidebar { background: #111; border-right: 1px solid #333; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .telemetry { background: #000; border: 1px solid var(--neon); padding: 15px; border-radius: 4px; }
-        .t-label { font-size: 10px; color: #666; text-transform: uppercase; }
-        .t-val { font-size: 18px; font-weight: bold; margin-bottom: 10px; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .header { border-bottom: 1px solid #333; padding: 10px 20px; display: flex; justify-content: space-between; background: #111; }
+        .main-container { display: grid; grid-template-columns: 350px 1fr; flex-grow: 1; overflow: hidden; }
+        .sidebar { padding: 20px; border-right: 1px solid #333; display: flex; flex-direction: column; gap: 15px; }
         #log { background: #000; padding: 20px; overflow-y: auto; font-size: 11px; }
+        .stat-box { border: 1px solid var(--neon); padding: 10px; margin-bottom: 5px; }
         input { width: 100%; background: #000; border: 1px solid #444; color: #fff; padding: 10px; box-sizing: border-box; }
-        button { background: var(--neon); color: #000; padding: 20px; width: 100%; border: none; font-weight: bold; cursor: pointer; }
-        .success { color: #fff; background: #004400; padding: 2px 4px; }
+        button { background: var(--neon); color: #000; padding: 15px; border: none; font-weight: bold; cursor: pointer; width: 100%; }
+        .success { color: #fff; background: #005500; }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
-    <h2 style="margin:0">VIPER V36</h2>
-    
-    <div class="telemetry">
-        <div class="t-label">Saldo PAS</div>
-        <div id="displayBal" class="t-val">0.000</div>
-        
-        <div class="t-label">Costo Medio Ciclo</div>
-        <div id="displayCost" class="t-val">---</div>
-        
-        <div class="t-label">Autonomia Stimata</div>
-        <div id="displayCycles" class="t-val">---</div>
-    </div>
-
-    <label class="t-label">Target Address</label>
-    <input type="text" id="target" placeholder="0x...">
-    <label class="t-label">Master Private Key</label>
-    <input type="password" id="key" placeholder="0x...">
-
-    <button onclick="ignite()">⚡ START AUTONOMOUS SPAM</button>
+<div class="header">
+    <span>SYSTEM: VIPER PREDATOR V37</span>
+    <span id="status">STATUS: STANDBY</span>
 </div>
 
-<div id="log"></div>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="stat-box">
+            <div style="font-size: 10px; color: #666;">AUTONOMIA PAS</div>
+            <div id="displayCycles" style="font-size: 20px;">---</div>
+        </div>
+        
+        <label style="font-size: 10px;">TARGET MATRIOSKA</label>
+        <input type="text" id="target" placeholder="0x...">
+        
+        <label style="font-size: 10px;">PRIVATE KEY</label>
+        <input type="password" id="key" placeholder="0x...">
+
+        <button onclick="ignite()">LANCIA RICORSIONE</button>
+        
+        <div id="telemetry" style="font-size: 10px; color: #555; margin-top: auto;">
+            RPC: Paseo Asset Hub<br>
+            Gas Limit: 8,000,000
+        </div>
+    </div>
+
+    <div id="log">> Inizializzazione completata. Pronto al lancio.</div>
+</div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
     const ABI = ["function spawn(address[] t) external", "function gen() view returns (uint256)", "event NewGen(address indexed daughter, uint256 g)"];
-    let isRunning = false;
-    let lastCost = 0;
+    let running = false;
 
-    function out(m, color="") {
+    function out(m, cls="") {
         const l = document.getElementById('log');
-        l.innerHTML = `<div>[${new Date().toLocaleTimeString()}] <span style="color:${color}">${m}</span></div>` + l.innerHTML;
+        l.innerHTML = `<div class="${cls}">[${new Date().toLocaleTimeString()}] ${m}</div>` + l.innerHTML;
     }
 
     async function ignite() {
-        if(isRunning) return; isRunning = true;
+        if(running) return;
+        running = true;
+        document.getElementById('status').innerText = "STATUS: ACTIVE";
         const provider = new ethers.JsonRpcProvider(RPC);
         const wallet = new ethers.Wallet(document.getElementById('key').value.trim(), provider);
 
         async function loop(addr) {
             try {
-                // Telemetria Saldo
-                const balance = await provider.getBalance(wallet.address);
-                const balEth = parseFloat(ethers.formatEther(balance));
-                document.getElementById('displayBal').innerText = balEth.toFixed(4);
-
-                if(lastCost > 0) {
-                    const cycles = Math.floor(balEth / lastCost);
-                    document.getElementById('displayCycles').innerText = cycles + " cicli";
-                }
-
+                const bal = await provider.getBalance(wallet.address);
+                const ethBal = parseFloat(ethers.formatEther(bal));
+                
                 const contract = new ethers.Contract(addr, ABI, wallet);
-                const currentGen = await contract.gen();
+                const g = await contract.gen();
                 
-                const targets = Array.from({length: 10}, () => ethers.Wallet.createRandom().address);
-                out(`Esecuzione Gen ${currentGen} su ${addr.substring(0,10)}...`);
-
+                out(`Gen ${g} individuata. Lancio attacco...`);
+                
+                const targets = Array.from({length: 5}, () => ethers.Wallet.createRandom().address);
                 const tx = await contract.spawn(targets, { gasLimit: 8000000 });
-                out(`TX: ${tx.hash.substring(0,20)}...`, "#00f2ff");
                 
+                out(`TX: ${tx.hash.substring(0,30)}...`);
                 const receipt = await tx.wait();
                 
-                // Telemetria Costo
-                lastCost = parseFloat(ethers.formatEther(receipt.gasUsed * receipt.gasPrice));
-                document.getElementById('displayCost').innerText = lastCost.toFixed(6);
+                const cost = parseFloat(ethers.formatEther(receipt.gasUsed * receipt.gasPrice));
+                document.getElementById('displayCycles').innerText = Math.floor(ethBal / (cost || 0.01)) + " cicli";
 
                 const event = receipt.logs.find(l => l.topics[0] === ethers.id("NewGen(address,uint256)"));
                 const daughter = ethers.getAddress("0x" + event.topics[1].slice(26));
                 
-                out(`FIGLIA NATA: ${daughter}`, "#fff");
+                out(`FIGLIA NATA: ${daughter}`, "success");
                 document.getElementById('target').value = daughter;
                 
                 setTimeout(() => loop(daughter), 5000);
-
-            } catch (e) { out("ERRORE: " + e.message, "red"); isRunning = false; }
+            } catch (e) {
+                out("ERRORE: " + e.message, "red");
+                running = false;
+                document.getElementById('status').innerText = "STATUS: FAILED";
+            }
         }
         loop(document.getElementById('target').value.trim());
     }
