@@ -2,65 +2,114 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>GORGON V44 | BATCHER</title>
+    <title>VIPER OMNISCIENCE V44.1</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --sat-red: #ff3300; --glass: rgba(15, 15, 15, 0.9); }
-        body { background: #000; color: #fff; font-family: 'JetBrains Mono', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .glass-box { background: var(--glass); backdrop-filter: blur(20px); border: 1px solid #333; border-radius: 15px; width: 900px; height: 650px; display: grid; grid-template-columns: 320px 1fr; overflow: hidden; box-shadow: 0 0 50px rgba(255,51,0,0.2); }
-        .side { padding: 30px; border-right: 1px solid #222; display: flex; flex-direction: column; gap: 15px; }
-        #log { flex-grow: 1; padding: 20px; font-size: 10px; overflow-y: auto; color: #888; background: rgba(0,0,0,0.3); }
-        .stat { background: #111; padding: 12px; border-left: 3px solid var(--sat-red); }
-        .val { font-size: 20px; font-weight: bold; color: var(--sat-red); }
-        input, select { background: #000; border: 1px solid #333; color: #fff; padding: 10px; width: 100%; box-sizing: border-box; }
-        button { background: var(--sat-red); color: #000; border: none; padding: 18px; font-weight: bold; cursor: pointer; text-transform: uppercase; margin-top: 10px; }
-        .tx-card { border-bottom: 1px solid #222; padding: 10px 0; font-size: 9px; }
+        :root { --neon: #ff3300; --bg: #030303; --glass: rgba(20, 20, 20, 0.95); }
+        body { background: var(--bg); color: #fff; font-family: 'JetBrains Mono', monospace; margin: 0; height: 100vh; display: grid; grid-template-columns: 400px 1fr; }
+        
+        /* Sidebar Telemetria */
+        .sidebar { background: var(--glass); border-right: 1px solid #333; padding: 20px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+        .panel { background: #000; border: 1px solid #222; padding: 12px; border-radius: 4px; }
+        .label { font-size: 9px; color: #555; text-transform: uppercase; margin-bottom: 5px; }
+        .val { font-size: 18px; font-weight: bold; color: var(--neon); }
+        .sub-val { font-size: 10px; color: #888; }
+        
+        /* Main Viewport */
+        .viewport { display: flex; flex-direction: column; height: 100vh; background: #000; }
+        .header { height: 40px; background: #111; border-bottom: 1px solid #333; display: flex; align-items: center; padding: 0 20px; font-size: 10px; justify-content: space-between; }
+        #log { flex-grow: 1; padding: 15px; overflow-y: auto; font-size: 10px; line-height: 1.4; color: #adbac7; white-space: pre-wrap; }
+        
+        /* Log Styling */
+        .l-info { color: #555; }
+        .l-warn { color: #ff9900; font-weight: bold; }
+        .l-success { color: #00ff41; background: rgba(0,255,65,0.1); }
+        .l-event { color: #00f2ff; padding-left: 15px; border-left: 1px solid #00f2ff33; }
+        .l-crit { color: #fff; background: var(--neon); padding: 2px 5px; }
+
+        input, select { background: #111; border: 1px solid #333; color: #fff; padding: 8px; width: 100%; box-sizing: border-box; font-size: 11px; }
+        button { background: var(--neon); color: #000; border: none; padding: 15px; font-weight: 900; cursor: pointer; text-transform: uppercase; margin-top: 5px; }
+        .progress-bar { height: 2px; background: #222; width: 100%; margin-top: 5px; }
+        #inner-progress { height: 100%; background: var(--neon); width: 0%; transition: 0.3s; }
     </style>
 </head>
 <body>
 
-<div class="glass-box">
-    <div class="side">
-        <h2 style="color:var(--sat-red); margin:0;">GORGON V44</h2>
-        
-        <div class="stat">
-            <div style="font-size:9px;">OPERAZIONI IN BATCH</div>
-            <div id="opCount" class="val">0</div>
-        </div>
+<div class="sidebar">
+    <h2 style="color:var(--neon); font-size:14px; margin:0 0 10px 0;">OMNISCIENCE CONTROL V44.1</h2>
+    
+    <div class="panel">
+        <div class="label">Saturazione Totale (Ops)</div>
+        <div id="totalOps" class="val">0</div>
+        <div id="opsSec" class="sub-val">0.0 ops/sec</div>
+    </div>
 
-        <label style="font-size:10px;">POTENZA BATCH (Loops)</label>
-        <select id="batchPower">
-            <option value="10">Light (10 loops)</option>
-            <option value="50">Medium (50 loops)</option>
-            <option value="150">Heavy (150 loops)</option>
-            <option value="300">APOCALYPSE (300 loops)</option>
+    <div class="panel">
+        <div class="label">Pressione Gas (L-Block)</div>
+        <div id="gasUsed" class="val">0</div>
+        <div id="gasEffic" class="sub-val">Efficiency: 0%</div>
+    </div>
+
+    <div class="panel">
+        <div class="label">Network Latency</div>
+        <div id="latency" class="val">0.00s</div>
+        <div id="inner-progress" class="progress-bar"><div id="p-bar"></div></div>
+    </div>
+
+    <div class="panel">
+        <label class="label">Deployment Target</label>
+        <input type="text" id="target" placeholder="0x...">
+        <label class="label" style="margin-top:10px;">Security Key</label>
+        <input type="password" id="key" placeholder="0x...">
+        <label class="label" style="margin-top:10px;">Power Level</label>
+        <select id="power">
+            <option value="50">50 Loops (Standard)</option>
+            <option value="150">150 Loops (High Stress)</option>
+            <option value="400">400 Loops (Apocalypse)</option>
         </select>
+        <button onclick="ignite()">⚡ START OMNI-BATCH</button>
+    </div>
 
-        <input type="text" id="target" placeholder="Matrioska Address">
-        <input type="password" id="key" placeholder="Private Key">
-        
-        <button onclick="startBatching()">🔥 LANCIA MEGA-BATCH</button>
-        
-        <div style="margin-top:auto; font-size:9px; color:#555;">
-            NETWORK: Paseo Asset Hub<br>
-            LIMIT: Block Gas Capacity
-        </div>
+    <div class="panel" style="flex-grow:1; overflow-y:auto;">
+        <div class="label">Hierarchy Tree</div>
+        <div id="tree" style="font-size:9px; color:#555;">[Waiting for genesis...]</div>
+    </div>
+</div>
+
+<div class="viewport">
+    <div class="header">
+        <span id="status">STATUS: STANDBY</span>
+        <span id="timer">UPTIME: 00:00:00</span>
     </div>
     <div id="log"></div>
 </div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
-    const ABI = ["function megaBatch(uint256 loops, address[] targets) external", "function gen() view returns (uint256)", "event NewGen(address indexed daughter, uint256 g)"];
-    let totalOps = 0;
+    const ABI = [
+        "function megaBatch(uint256 loops, address[] targets) external",
+        "function gen() view returns (uint256)",
+        "event Transfer(address indexed from, address indexed to, uint256 value)",
+        "event NewGen(address indexed daughter, uint256 g)"
+    ];
+    
+    let stats = { ops: 0, start: null, lastGas: 0 };
+    let running = false;
 
-    function log(m, hash = "") {
+    function out(m, cls="l-info") {
         const l = document.getElementById('log');
-        const link = hash ? `<a href="https://assethub-paseo.subscan.io/extrinsic/${hash}" target="_blank" style="color:#555; margin-left:10px;">VIEW ↗</a>` : "";
-        l.innerHTML = `<div class="tx-card">[${new Date().toLocaleTimeString()}] ${m}${link}</div>` + l.innerHTML;
+        const d = document.createElement('div');
+        d.className = cls;
+        d.innerHTML = `[${new Date().toISOString().split('T')[1].split('Z')[0]}] ${m}`;
+        l.insertBefore(d, l.firstChild);
+        if(l.children.length > 500) l.lastChild.remove(); // Memory limit
     }
 
-    async function startBatching() {
+    async function ignite() {
+        if(running) return;
+        running = true;
+        stats.start = Date.now();
+        document.getElementById('status').innerText = "STATUS: ACTIVE SATURATION";
         process();
     }
 
@@ -68,39 +117,57 @@
         const provider = new ethers.JsonRpcProvider(RPC);
         const wallet = new ethers.Wallet(document.getElementById('key').value, provider);
         const addr = document.getElementById('target').value.trim();
-        const loops = document.getElementById('batchPower').value;
+        const loops = document.getElementById('power').value;
         const contract = new ethers.Contract(addr, ABI, wallet);
 
         try {
-            log(`Preparazione Batch da ${loops} cicli...`);
             const targets = Array.from({length: 10}, () => ethers.Wallet.createRandom().address);
-            
-            // Gas limit proporzionale alla potenza scelta
-            const gasLimit = Number(loops) * 150000; 
+            const gasLimit = Number(loops) * 160000;
+            const startTime = Date.now();
 
-            const tx = await contract.megaBatch(loops, targets, { gasLimit: gasLimit });
-            log(`Inviato Mega-Batch. Saturazione in corso...`, tx.hash);
+            out(`>>> INITIALIZING MEGA-BATCH [Loops: ${loops}]`, "l-warn");
+            const tx = await contract.megaBatch(loops, targets, { gasLimit });
+            out(`TX BROADCASTED: ${tx.hash}`, "l-info");
             
             const receipt = await tx.wait();
-            
-            totalOps += Number(loops);
-            document.getElementById('opCount').innerText = totalOps;
-            log(`<span style="color:#00ff41;">BATCH CONFERMATO. ${loops} operazioni iniettate.</span>`, receipt.hash);
+            const latency = (Date.now() - startTime) / 1000;
 
-            // Trova la prossima figlia
-            const topic = ethers.id("NewGen(address,uint256)");
-            const daughters = receipt.logs.filter(l => l.topics[0] === topic);
+            // ANALISI TELEMETRICA
+            stats.ops += Number(loops);
+            document.getElementById('totalOps').innerText = stats.ops;
+            document.getElementById('latency').innerText = latency.toFixed(2) + "s";
+            document.getElementById('gasUsed').innerText = Number(receipt.gasUsed).toLocaleString();
+            
+            const opsSec = stats.ops / ((Date.now() - stats.start) / 1000);
+            document.getElementById('opsSec').innerText = opsSec.toFixed(1) + " ops/sec";
+
+            out(`<<< BATCH CONFIRMED IN ${latency}s`, "l-success");
+            
+            // LOGGING DETTAGLIATO EVENTI
+            receipt.logs.forEach((l, idx) => {
+                if(idx < 50) { // Mostriamo solo i primi 50 eventi per evitare crash browser
+                    if(l.topics[0] === ethers.id("Transfer(address,address,uint256)")) {
+                        const to = "0x" + l.topics[2].slice(26);
+                        out(`    EVENT: Transfer -> ${to.substring(0,10)}...`, "l-event");
+                    }
+                }
+            });
+            if(receipt.logs.length > 50) out(`    ...and ${receipt.logs.length - 50} more events in this block`, "l-info");
+
+            // SEARCH DAUGHTERS
+            const genTopic = ethers.id("NewGen(address,uint256)");
+            const daughters = receipt.logs.filter(l => l.topics[0] === genTopic);
             if(daughters.length > 0) {
                 const next = ethers.getAddress("0x" + daughters[0].topics[1].slice(26));
                 document.getElementById('target').value = next;
-                log(`Salto alla prossima generazione: ${next}`);
+                document.getElementById('tree').innerHTML += `<div>↳ GEN ${receipt.logs.length} @ ${next.substring(0,10)}...</div>`;
+                out(`SCION DETECTED: ${next}. MIGRATING CONTROL.`, "l-crit");
             }
 
-            setTimeout(process, 2000);
-
+            setTimeout(process, 1000);
         } catch (e) {
-            log(`ERRORE BATCH: ${e.reason || 'Gas Limit Exceeded'}`, "red");
-            setTimeout(process, 5000);
+            out(`EXECUTION REVERTED: ${e.message}`, "l-warn");
+            setTimeout(process, 3000);
         }
     }
 </script>
