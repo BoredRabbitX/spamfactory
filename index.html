@@ -2,105 +2,93 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>OBSIDIAN v12 | MANUAL ENCODING</title>
+    <title>OBSIDIAN v13 | RAW BLITZ</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
         :root { --magenta: #ff00ff; --cyan: #00f2ff; --bg: #050505; }
-        body { background: var(--bg); color: #fff; font-family: monospace; padding: 20px; display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
-        .sidebar { background: #111; padding: 20px; border: 1px solid var(--magenta); }
-        #console { background: #000; border: 1px solid #1a1a1a; padding: 15px; overflow-y: auto; height: 90vh; color: var(--cyan); font-size: 11px; white-space: pre-wrap; }
-        input, textarea { width: 100%; background: #000; border: 1px solid #333; color: var(--cyan); padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
-        .btn { width: 100%; padding: 15px; background: var(--magenta); border: none; font-weight: bold; cursor: pointer; color: #000; }
-        .log-new { color: white; background: #800080; }
-        .log-err { color: #ff3333; }
+        body { background: var(--bg); color: #fff; font-family: 'Courier New', monospace; padding: 20px; display: grid; grid-template-columns: 380px 1fr; gap: 20px; }
+        .sidebar { background: #111; padding: 20px; border: 1px solid var(--magenta); box-shadow: 0 0 15px var(--magenta); }
+        #console { background: #000; border: 1px solid #1a1a1a; padding: 15px; overflow-y: auto; height: 90vh; color: var(--cyan); font-size: 11px; }
+        input { width: 100%; background: #000; border: 1px solid #333; color: var(--cyan); padding: 10px; margin-bottom: 10px; }
+        .btn-nuke { width: 100%; padding: 20px; background: white; color: black; border: none; font-weight: bold; cursor: pointer; font-size: 1.2em; }
+        .log-tx { color: yellow; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h2 style="color:var(--magenta)">OBSIDIAN v12</h2>
-    <label>FACTORY ADDR:</label>
-    <input type="text" id="fAddr" placeholder="0x...">
+    <h2 style="color:var(--magenta)">MATRIOSKA v13</h2>
+    <label>TARGET CONTRACT:</label>
+    <input type="text" id="fAddr" value="0x21d2272c5BCEFD868E6a357695FAC1Ec9336430f">
     <label>PRIVATE KEY:</label>
     <input type="password" id="pKey">
-    <label>DELAY (SEC):</label>
-    <input type="number" id="delay" value="30">
-    <button class="btn" onclick="startEngine()">FORCE IGNITION</button>
+    <button class="btn-nuke" onclick="ignite()">☢️ NUCLEAR IGNITION</button>
 </div>
 
 <div id="console"></div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
-    const INTERFACE = new ethers.Interface([
-        "function blast(address[] calldata targets, uint256 amount) external",
-        "event MatrioskaBirthed(address indexed daughter)"
-    ]);
     
-    let isRunning = false;
+    // ABI ultra-semplificata
+    const MIN_ABI = ["function blast(address[] targets, uint256 amount)"];
 
-    function log(msg, cls="") {
+    function log(msg, color="") {
         const c = document.getElementById('console');
-        c.innerHTML = `<div class="${cls}">[${new Date().toLocaleTimeString()}] ${msg}</div>` + c.innerHTML;
+        const style = color ? `style="color:${color}"` : "";
+        c.innerHTML = `<div>[${new Date().toLocaleTimeString()}] <span ${style}>${msg}</span></div>` + c.innerHTML;
     }
 
-    async function startEngine() {
-        if(isRunning) return;
-        isRunning = true;
-        log("ENGINE STARTING - MANUAL ENCODING MODE");
-        loop();
-    }
-
-    async function loop() {
-        if(!isRunning) return;
+    async function ignite() {
         const addr = document.getElementById('fAddr').value.trim();
         const key = document.getElementById('pKey').value.trim();
-
+        
         try {
             const provider = new ethers.JsonRpcProvider(RPC);
             const wallet = new ethers.Wallet(key, provider);
+            const iface = new ethers.Interface(MIN_ABI);
 
-            // Generazione targets
-            let targets = [];
-            for(let i=0; i<8; i++) targets.push(ethers.Wallet.createRandom().address);
+            log("--- GENERAZIONE PAYLOAD ---");
+            
+            // Generiamo 5 target fissi per testare la stabilità
+            const targets = [
+                "0x0000000000000000000000000000000000000001",
+                "0x0000000000000000000000000000000000000002"
+            ];
+            const amount = 1000000;
 
-            log(`ENCODING DATA FOR: ${addr}`);
+            // CODIFICA MANUALE ATOMICA
+            const encodedData = iface.encodeFunctionData("blast", [targets, amount]);
             
-            // CODIFICA MANUALE DEI DATI
-            const data = INTERFACE.encodeFunctionData("blast", [targets, 1000000]);
-            
-            log(`DATA GENERATED: ${data.substring(0,20)}...`);
+            log("DATA ENCODED: " + encodedData.substring(0, 32) + "...", "cyan");
 
-            // INVIO TRANSAZIONE LOW-LEVEL
-            const tx = await wallet.sendTransaction({
-                to: addr,
-                data: data,
-                gasLimit: 3000000
-            });
-            
-            log(`TX BROADCASTED: ${tx.hash}`);
-            const receipt = await tx.wait();
-            
-            if(receipt.status === 0) throw new Error("Revert on-chain");
-
-            // PARSING MANUALE DEI LOG
-            for (const l of receipt.logs) {
-                try {
-                    const parsed = INTERFACE.parseLog(l);
-                    if(parsed && parsed.name === "MatrioskaBirthed") {
-                        const daughter = parsed.args[0];
-                        log(`DAUGHTER BORN: ${daughter}`, "log-new");
-                        document.getElementById('fAddr').value = daughter;
-                    }
-                } catch(e) {}
+            if (encodedData === "0x" || !encodedData) {
+                throw new Error("Codifica fallita: il pacchetto dati è vuoto!");
             }
 
-            log("Cycle complete. Waiting...");
-            setTimeout(loop, document.getElementById('delay').value * 1000);
+            log("Invio transazione RAW...");
+            
+            const txRequest = {
+                to: addr,
+                data: encodedData,
+                gasLimit: 2000000
+            };
+
+            const tx = await wallet.sendTransaction(txRequest);
+            
+            log("HASH INVIATO: " + tx.hash, "yellow");
+            const receipt = await tx.wait();
+            
+            if(receipt.status === 1) {
+                log("!!! SUCCESSO TOTALE !!!", "#00ff00");
+                // Qui potresti aggiungere la logica per trovare la figlia e ricominciare
+            } else {
+                log("FALLIMENTO ON-CHAIN (REVERT)", "red");
+            }
 
         } catch (e) {
-            log(`ERROR: ${e.message}`, "log-err");
-            isRunning = false;
+            log("ERRORE: " + e.message, "red");
+            console.error(e);
         }
     }
 </script>
