@@ -2,95 +2,95 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>OBSIDIAN v10 | MATRIOSKA EDITION</title>
+    <title>OBSIDIAN v10.2 | STRIKE</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --matrioska: #ff00ff; --cyan: #00f2ff; --bg: #050505; --panel: #111; }
-        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; }
-        .sidebar { width: 400px; background: var(--panel); border-right: 1px solid var(--matrioska); padding: 20px; display: flex; flex-direction: column; }
-        #console { flex-grow: 1; background: #000; padding: 20px; font-family: monospace; overflow-y: auto; color: var(--cyan); }
-        .btn-matrioska { background: var(--matrioska); color: #000; padding: 20px; font-weight: 900; border: none; cursor: pointer; text-transform: uppercase; box-shadow: 0 0 15px var(--matrioska); }
-        input, textarea { background: #000; border: 1px solid #333; color: var(--cyan); padding: 10px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
-        .stat { font-size: 12px; color: #888; margin-bottom: 5px; }
-        .log-new-addr { color: #fff; background: #550055; padding: 2px 5px; }
+        :root { --magenta: #ff00ff; --cyan: #00f2ff; --bg: #050505; }
+        body { background: var(--bg); color: #fff; font-family: monospace; padding: 20px; display: grid; grid-template-columns: 400px 1fr; gap: 20px; }
+        .sidebar { background: #111; padding: 20px; border: 1px solid var(--magenta); }
+        #console { background: #000; border: 1px solid #333; padding: 15px; overflow-y: auto; height: 90vh; color: var(--cyan); font-size: 11px; }
+        input, textarea { width: 100%; background: #000; border: 1px solid #444; color: var(--cyan); padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+        .btn { width: 100%; padding: 15px; background: var(--magenta); border: none; font-weight: bold; cursor: pointer; }
+        .log-new { color: white; background: #800080; }
     </style>
 </head>
 <body>
 
 <div class="sidebar">
-    <h1 style="color:var(--matrioska)">MATRIOSKA v10</h1>
-    <div class="stat">Current Factory Address:</div>
-    <input type="text" id="currentAddr" placeholder="Indirizzo Matrioska Attiva">
-    
-    <div class="stat">Owner Private Key:</div>
-    <input type="password" id="pKey" placeholder="0x...">
-
-    <div class="stat">Automazione:</div>
-    <button class="btn-matrioska" id="actionBtn" onclick="toggleMatrioska()">Start Replicating Chain</button>
-    
-    <div style="margin-top:20px" class="stat">Targets rilevati:</div>
-    <textarea id="tDisplay" readonly></textarea>
+    <h2 style="color:var(--magenta)">MATRIOSKA v10.2</h2>
+    <label>FACTORY ADDRESS:</label>
+    <input type="text" id="fAddr" placeholder="Indirizzo da Remix">
+    <label>PRIVATE KEY:</label>
+    <input type="password" id="pKey">
+    <label>DELAY (SEC):</label>
+    <input type="number" id="delay" value="30">
+    <button class="btn" onclick="startBot()">AVVIA PROTOCOLLO</button>
+    <p style="font-size: 10px; color: #666; margin-top: 10px;">Status: <span id="status">IDLE</span></p>
 </div>
 
-<div id="console">
-    <div>[SYSTEM] In attesa di inizializzazione catena Matrioska...</div>
-</div>
+<div id="console"></div>
 
 <script>
-    const ABI = [
-        "function blast(address[] memory targets, uint256 amount) external",
-        "event MatrioskaBirthed(address indexed daughter)"
-    ];
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
-    let active = false;
+    const ABI = ["function blast(address[] memory targets, uint256 amount) public"];
+    let running = false;
 
     function log(msg, cls="") {
         const c = document.getElementById('console');
         c.innerHTML = `<div class="${cls}">[${new Date().toLocaleTimeString()}] ${msg}</div>` + c.innerHTML;
     }
 
-    async function toggleMatrioska() {
-        if(active) { active = false; return; }
-        active = true;
-        runChain();
+    async function startBot() {
+        if(running) return;
+        running = true;
+        document.getElementById('status').innerText = "RUNNING";
+        loop();
     }
 
-    async function runChain() {
-        if(!active) return;
-        const key = document.getElementById('pKey').value;
-        const factoryAddr = document.getElementById('currentAddr').value;
+    async function loop() {
+        if(!running) return;
+        const addr = document.getElementById('fAddr').value.trim();
+        const key = document.getElementById('pKey').value.trim();
         
         try {
             const provider = new ethers.JsonRpcProvider(RPC);
             const wallet = new ethers.Wallet(key, provider);
-            const contract = new ethers.Contract(factoryAddr, ABI, wallet);
+            const contract = new ethers.Contract(addr, ABI, wallet);
 
-            // 1. Scrape targets
+            // Genera target
             let targets = [];
-            for(let i=0; i<15; i++) targets.push(ethers.Wallet.createRandom().address);
-            document.getElementById('tDisplay').value = targets.join("\n");
+            for(let i=0; i<10; i++) targets.push(ethers.Wallet.createRandom().address);
 
-            log("Lancio Blast + Clonazione Matrioska...");
-            const tx = await contract.blast(targets, 1000000, { gasLimit: 3000000 });
-            log(`TX: ${tx.hash}`);
+            log(`Esecuzione Blast su: ${addr}`);
             
+            // Chiamata esplicita con gas forzato
+            const tx = await contract.blast(targets, 1000000, {
+                gasLimit: 3000000,
+                gasPrice: (await provider.getFeeData()).gasPrice
+            });
+            
+            log(`TX Broadcasted: ${tx.hash}`);
             const receipt = await tx.wait();
             
-            // 2. Trova la nuova figlia nei log
-            const event = receipt.logs.find(l => l.topics[0] === ethers.id("MatrioskaBirthed(address)"));
-            const daughterAddr = ethers.getAddress("0x" + event.topics[1].slice(26));
-            
-            log(`NUOVA MATRIOSKA NATA: ${daughterAddr}`, "log-new-addr");
-            
-            // 3. Aggiorna l'indirizzo per il prossimo giro
-            document.getElementById('currentAddr').value = daughterAddr;
+            if(receipt.status === 0) throw new Error("Reverted on-chain");
 
-            log("Attesa 60s per il prossimo livello della catena...");
-            setTimeout(runChain, 60000);
+            // Analisi log per trovare la figlia
+            const topicBirth = ethers.id("MatrioskaBirthed(address)");
+            const birthLog = receipt.logs.find(l => l.topics[0] === topicBirth);
+            
+            if(birthLog) {
+                const daughter = ethers.getAddress("0x" + birthLog.topics[1].slice(26));
+                log(`FIGLIA GENERATA: ${daughter}`, "log-new");
+                document.getElementById('fAddr').value = daughter;
+            }
+
+            log(`Ciclo completato. Attesa...`);
+            setTimeout(loop, document.getElementById('delay').value * 1000);
 
         } catch (e) {
-            log("ERRORE CATENA: " + e.message, "error");
-            active = false;
+            log(`ERRORE: ${e.message}`, "color:red");
+            running = false;
+            document.getElementById('status').innerText = "STOPPED";
         }
     }
 </script>
