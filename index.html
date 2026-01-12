@@ -2,119 +2,74 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>OBSIDIAN V27.1 | RECURSIVE MONITOR</title>
+    <title>VIPER PREDATOR V29</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        :root { --neon: #00ff41; --bg: #050505; --panel: #111; }
-        body { background: var(--bg); color: var(--neon); font-family: 'JetBrains Mono', monospace; margin: 0; display: grid; grid-template-columns: 400px 1fr; height: 100vh; }
-        .sidebar { background: var(--panel); border-right: 1px solid #222; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        #monitor { background: #000; padding: 20px; overflow-y: auto; color: #adbac7; font-size: 11px; line-height: 1.6; }
-        .stat-card { background: #000; border: 1px solid #222; padding: 10px; border-radius: 4px; }
-        .stat-label { font-size: 9px; color: #555; text-transform: uppercase; }
-        .stat-val { font-size: 16px; color: var(--neon); font-weight: bold; }
-        input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 4px; box-sizing: border-box; }
-        button { background: var(--neon); color: #000; padding: 20px; border: none; font-weight: 900; cursor: pointer; border-radius: 4px; text-transform: uppercase; }
-        .log-new { color: #fff; background: #004400; padding: 2px 5px; }
+        body { background: #000; color: #ff00ff; font-family: 'Courier New', monospace; padding: 20px; }
+        .monitor { border: 1px solid #ff00ff; height: 60vh; overflow-y: auto; background: #050005; padding: 15px; font-size: 11px; }
+        .stat-bar { background: #1a001a; padding: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; border: 1px solid #330033; }
+        input { background: #000; border: 1px solid #ff00ff; color: #fff; padding: 10px; width: 45%; }
+        button { width: 100%; padding: 20px; background: #ff00ff; color: #000; font-weight: bold; border: none; cursor: pointer; margin-top: 10px; }
+        .token-tx { color: #00ff00; }
     </style>
 </head>
 <body>
-
-<div class="sidebar">
-    <h2 style="margin:0; color:var(--neon)">VIPER V27.1</h2>
+    <h1>☢️ MATRIOSKA TOKEN ENGINE V29 ☢️</h1>
     
-    <div class="stat-card">
-        <div class="stat-label">Saldo Residuo PAS</div>
-        <div id="valBalance" class="stat-val">0.000</div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-label">Costo Ultimo Deploy</div>
-        <div id="valGas" class="stat-val">---</div>
+    <div class="stat-bar">
+        <span>GEN ATTUALE: <span id="gen">0</span></span>
+        <span>TOKEN DISTRIBUITI: <span id="dist">0</span></span>
     </div>
 
-    <label class="stat-label">Indirizzo Madre Attiva</label>
-    <input type="text" id="masterAddr" placeholder="0x...">
-    
-    <label class="stat-label">Chiave Privata Master</label>
-    <input type="password" id="pKey" placeholder="0x...">
+    <input type="text" id="target" placeholder="Indirizzo Madre">
+    <input type="password" id="key" placeholder="Private Key">
+    <button onclick="startInfection()">⚡ IGNITION</button>
 
-    <button onclick="startRecursion()">Inizia Deploy Infinito</button>
-    <div style="font-size: 10px; color: #444; margin-top: auto;">Network: Paseo Asset Hub</div>
-</div>
-
-<div id="monitor">
-    <div>> Terminale pronto. In attesa di segnale...</div>
-</div>
+    <div id="monitor" class="monitor"></div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
-    const ABI = [
-        "function spawnNext() external",
-        "function generation() view returns (uint256)",
-        "event NewGeneration(address indexed daughter, uint256 gen)"
-    ];
+    const ABI = ["function spawnNext(address[] targets) external", "function generation() view returns (uint256)"];
 
-    let running = false;
-
-    function log(msg, color = "") {
-        const m = document.getElementById('monitor');
-        const style = color ? `style="color:${color}"` : "";
-        m.innerHTML = `<div>[${new Date().toLocaleTimeString()}] <span ${style}>${msg}</span></div>` + m.innerHTML;
-    }
-
-    async function updateStats(provider, wallet, receipt = null) {
-        const bal = await provider.getBalance(wallet.address);
-        document.getElementById('valBalance').innerText = parseFloat(ethers.formatEther(bal)).toFixed(4);
-        if(receipt) {
-            document.getElementById('valGas').innerText = receipt.gasUsed.toString();
-        }
-    }
-
-    async function startRecursion() {
-        if(running) return;
-        running = true;
-        log("PROTOCOLLO MATRIOSKA ATTIVATO", "var(--neon)");
-        loop();
-    }
-
-    async function loop() {
-        if(!running) return;
-        const addr = document.getElementById('masterAddr').value.trim();
-        const key = document.getElementById('pKey').value.trim();
+    async function startInfection() {
+        const addr = document.getElementById('target').value.trim();
+        const pkey = document.getElementById('key').value.trim();
+        const mon = document.getElementById('monitor');
 
         try {
             const provider = new ethers.JsonRpcProvider(RPC);
-            const wallet = new ethers.Wallet(key, provider);
+            const wallet = new ethers.Wallet(pkey, provider);
             const contract = new ethers.Contract(addr, ABI, wallet);
 
-            await updateStats(provider, wallet);
             const gen = await contract.generation();
+            document.getElementById('gen').innerText = gen;
 
-            log(`GENERAZIONE ${gen}: Comandando il deploy della figlia...`);
+            // Genera 10 indirizzi casuali per lo spam/airdrop
+            const targets = Array.from({length: 10}, () => ethers.Wallet.createRandom().address);
+            
+            mon.innerHTML = `<div>[${new Date().toLocaleTimeString()}] Lancio Gen ${gen}... Distribuzione token a 10 target casuali...</div>` + mon.innerHTML;
 
-            // Il deploy reale richiede molto gas (usiamo 8M per sicurezza)
-            const tx = await contract.spawnNext({ gasLimit: 8000000 });
-            log(`TX Broadcast: ${tx.hash.substring(0,30)}...`);
+            const tx = await contract.spawnNext(targets, { gasLimit: 8000000 });
+            mon.innerHTML = `<div class="token-tx">TX INVIATA: ${tx.hash}</div>` + mon.innerHTML;
             
             const receipt = await tx.wait();
-            await updateStats(provider, wallet, receipt);
-
-            // Intercettiamo l'indirizzo della figlia
-            const topic = ethers.id("NewGeneration(address,uint256)");
-            const event = receipt.logs.find(l => l.topics[0] === topic);
             
-            if(event) {
-                const daughterAddr = ethers.getAddress("0x" + event.topics[1].slice(26));
-                log(`FIGLIA NATA: ${daughterAddr}`, "#fff");
+            // Trova la nuova figlia nei log
+            const birthTopic = ethers.id("NewGeneration(address,uint256)");
+            const logBirth = receipt.logs.find(l => l.topics[0] === birthTopic);
+            
+            if(logBirth) {
+                const daughter = ethers.getAddress("0x" + logBirth.topics[1].slice(26));
+                mon.innerHTML = `<div style="color:white">SUCCESS: Figlia Gen ${Number(gen)+1} nata a ${daughter}</div>` + mon.innerHTML;
+                document.getElementById('target').value = daughter;
                 
-                // Salto generazionale
-                document.getElementById('masterAddr').value = daughterAddr;
-                log("Sincronizzazione completata. Prossimo ciclo tra 10s...");
-                setTimeout(loop, 10000);
+                // Aggiorna contatore e ricomincia
+                document.getElementById('dist').innerText = (Number(document.getElementById('dist').innerText) + 10);
+                setTimeout(startInfection, 5000);
             }
 
         } catch (e) {
-            log("ERRORE: " + e.message, "red");
-            running = false;
+            mon.innerHTML = `<div style="color:red">ERROR: ${e.message}</div>` + mon.innerHTML;
         }
     }
 </script>
