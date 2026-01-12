@@ -2,68 +2,103 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>OBSIDIAN v24 | FINAL STRIKE</title>
+    <title>OBSIDIAN V27 | RECURSIVE DEPLOYER</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        body { background: #000; color: #ff0055; font-family: 'Courier New', monospace; padding: 20px; }
-        #console { border: 1px solid #ff0055; height: 75vh; overflow-y: auto; padding: 15px; background: #050000; font-size: 11px; }
-        input { width: 100%; background: #000; border: 1px solid #ff0055; color: #fff; padding: 12px; margin-bottom: 10px; box-sizing: border-box; }
-        button { width: 100%; padding: 20px; background: #ff0055; color: #fff; border: none; font-weight: bold; cursor: pointer; font-size: 1.2em; }
-        .success { color: #00ff41; }
+        :root { --neon: #00ff41; --bg: #050505; }
+        body { background: var(--bg); color: var(--neon); font-family: 'JetBrains Mono', monospace; padding: 20px; }
+        .monitor { border: 1px solid var(--neon); padding: 20px; height: 60vh; overflow-y: auto; background: #000; box-shadow: 0 0 15px rgba(0,255,65,0.2); }
+        .controls { margin-bottom: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        input { background: #111; border: 1px solid #333; color: #fff; padding: 10px; }
+        button { background: var(--neon); color: #000; border: none; padding: 15px; font-weight: bold; cursor: pointer; }
+        .stat-box { display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.8em; opacity: 0.8; }
+        .highlight { color: #fff; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h2>COMMAND CENTER v24</h2>
-    <input type="text" id="target" placeholder="Indirizzo Contratto (DA REMIX)">
-    <input type="password" id="key" placeholder="Private Key">
-    <button onclick="ignite()">☢️ LAUNCH RECURSIVE VIRUS</button>
-    <div id="console"></div>
+    <h1>RECURSIVE DEPLOYER V27</h1>
+    
+    <div class="controls">
+        <input type="text" id="masterAddr" placeholder="Indirizzo Madre Iniziale">
+        <input type="password" id="pKey" placeholder="Private Key (0xa036...)">
+    </div>
+    <button onclick="startRecursion()">⚡ INIZIA DEPLOY INFINITO</button>
+
+    <div class="stat-box">
+        <span>CONTRATTO ATTIVO: <span id="curAddr" class="highlight">---</span></span>
+        <span>GENERAZIONE: <span id="curGen" class="highlight">0</span></span>
+    </div>
+
+    <div id="monitor" class="monitor">> In attesa di input...</div>
 
 <script>
     const RPC = "https://testnet-passet-hub-eth-rpc.polkadot.io";
-    const ABI = ["function infect(address[] targets)", "event Birth(address daughter)"];
+    const ABI = [
+        "function spawnNext() external",
+        "function generation() view returns (uint256)",
+        "event NewGeneration(address indexed daughter, uint256 gen)"
+    ];
 
-    function log(msg, cls="") {
-        const c = document.getElementById('console');
-        c.innerHTML = `<div class="${cls}">[${new Date().toLocaleTimeString()}] ${msg}</div>` + c.innerHTML;
+    let running = false;
+
+    function log(msg, color = "") {
+        const m = document.getElementById('monitor');
+        const style = color ? `style="color:${color}"` : "";
+        m.innerHTML = `<div ${style}>[${new Date().toLocaleTimeString()}] ${msg}</div>` + m.innerHTML;
     }
 
-    async function ignite() {
-        const addr = document.getElementById('target').value.trim();
-        const pkey = document.getElementById('key').value.trim();
+    async function startRecursion() {
+        if(running) return;
+        running = true;
+        log("SISTEMA AVVIATO. Protocollo Matrioska in corso...", "#00ff41");
+        loop();
+    }
+
+    async function loop() {
+        if(!running) return;
         
+        const addr = document.getElementById('masterAddr').value.trim();
+        const key = document.getElementById('pKey').value.trim();
+
         try {
             const provider = new ethers.JsonRpcProvider(RPC);
-            const wallet = new ethers.Wallet(pkey, provider);
-            const iface = new ethers.Interface(ABI);
+            const wallet = new ethers.Wallet(key, provider);
+            const contract = new ethers.Contract(addr, ABI, wallet);
 
-            log("--- NUOVO CICLO ---");
-            const targets = [ethers.Wallet.createRandom().address, ethers.Wallet.createRandom().address];
-            const data = iface.encodeFunctionData("infect", [targets]);
+            // 1. Lettura dati attuali
+            const gen = await contract.generation();
+            document.getElementById('curAddr').innerText = addr.substring(0,10) + "...";
+            document.getElementById('curGen').innerText = gen;
 
-            log("Invio transazione a: " + addr);
-            const tx = await wallet.sendTransaction({
-                to: addr,
-                data: data,
-                gasLimit: 4000000
-            });
+            log(`ORDINE: Generazione ${gen} -> Comandando il deploy della prossima figlia...`);
 
-            log("Hash: " + tx.hash);
+            // 2. Comando di deploy alla Madre attuale
+            // Aumentiamo il gas limit perché il deploy di un nuovo contratto è costoso
+            const tx = await contract.spawnNext({ gasLimit: 5000000 });
+            log(`TX Inviata: ${tx.hash.substring(0,20)}...`);
+            
             const receipt = await tx.wait();
+            log("Confermato! Estrazione indirizzo figlia...", "yellow");
 
-            if(receipt.status === 1) {
-                log("CONFERMATO!", "success");
-                // Cerca la figlia nel log (è l'ultimo topic)
-                const birthTopic = ethers.id("Birth(address)");
-                const logBirth = receipt.logs.find(l => l.topics[0] === birthTopic);
-                if(logBirth) {
-                    const daughter = ethers.getAddress("0x" + logBirth.topics[1].slice(26));
-                    log("FIGLIA RILEVATA: " + daughter, "success");
-                    document.getElementById('target').value = daughter;
-                    setTimeout(ignite, 3000); // Ricomincia subito
-                }
+            // 3. Intercettazione dell'evento per trovare la Figlia
+            const topic = ethers.id("NewGeneration(address,uint256)");
+            const event = receipt.logs.find(l => l.topics[0] === topic);
+            
+            if(event) {
+                const daughterAddr = ethers.getAddress("0x" + event.topics[1].slice(26));
+                log(`FIGLIA NATA: ${daughterAddr}`, "#fff");
+                
+                // 4. Salto generazionale: il terminale ora punta alla figlia
+                document.getElementById('masterAddr').value = daughterAddr;
+                
+                log("Spostamento su nuova generazione tra 5 secondi...");
+                setTimeout(loop, 5000);
             }
-        } catch (e) { log("ERRORE: " + e.message); }
+
+        } catch (e) {
+            log("ERRORE CRITICO: " + e.message, "red");
+            running = false;
+        }
     }
 </script>
 </body>
